@@ -1,0 +1,59 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+div {
+  flex: 1;
+}
+
+ul {
+  list-style: none;
+}
+
+@mixin flex-row($wrap: nowrap) {
+  display: flex;
+  flex-flow: row $wrap;
+}
+
+@mixin flex-col($wrap: nowrap) {
+  display: flex;
+  flex-flow: column $wrap;
+}
+
+@mixin text-omit() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin sidebar {
+  background-color: #264246;
+  color: #fff;
+}
+
+@mixin sidebar-item {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #0D1D21;
+  &.active {
+    border-image: linear-gradient(90deg, rgba(146,202,204,0.40) 0%, rgba(109,170,173,0.99) 32%, #6DABAE 64%, rgba(88,153,157,0.40) 100%) 1;
+    background-color: #0D1D21;
+  }
+}
+
+@mixin puregrid($width: 200px) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, $width);
+  justify-content: space-evenly;
+  justify-items: center;
+  align-items: center;
+}
+@mixin dashboard-item {
+  width: 147px;
+  height: 154px;
+  margin: 16px;
+  background-color: rgba(45,75,80,0.80);
+}
