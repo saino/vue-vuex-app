@@ -1,4 +1,4 @@
-import '@/utils/helper'
+import '@/utils/prototypeEnhance'
 
 import Vue from 'vue'
 import App from './App.vue'
@@ -19,6 +19,9 @@ Vue.use(VueWait)
 import infiniteScroll from 'vue-infinite-scroll'
 Vue.use(infiniteScroll)
 
+import vuewheel from 'vuewheel'
+Vue.use(vuewheel)
+
 import VeeValidate from 'vee-validate'
 Vue.use(VeeValidate)
 
@@ -27,6 +30,18 @@ Vue.use(VueConfirm)
 
 
 Vue.config.productionTip = false
+
+Vue.config.keyCodes = {
+  equal: 187,
+  minus: 189,
+  slash: 191,
+  backquote: 192,
+  num1: 49,
+  num2: 50,
+  num3: 51,
+  num4: 52,
+  num5: 53,
+}
 
 new Vue({
   router,

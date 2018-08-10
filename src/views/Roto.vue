@@ -7,29 +7,51 @@
           <li class="list-item" @click="toMaterialList">
             添加素材
           </li>
-          <li class="list-item" v-for="(roto, guid) of entities" :key="guid"
-            :class="{ active: currentId === guid }" @click="currentId = guid">
-            <span class="name"><i v-if="roto.modified">* </i>{{ roto.material.name }}</span>
-            <button class="close" @click="$cfmWhen(roto.modified, '抠像尚未保存，确定关闭?', () => remove(guid))">关闭</button>
+          <li class="list-item"
+            v-for="(roto, guid) of entities" :key="guid"
+            :class="{ active: currentId === guid }"
+            @click="currentId = guid">
+            <span class="name" :title="roto.material.name">
+              <i v-if="roto.modified">* </i>{{ roto.material.name }}
+            </span>
+            <button class="close" @click.stop="$cfmWhen(roto.modified, '抠像尚未保存，确定关闭?', () => remove(guid))">关闭</button>
           </li>
         </ul>
       </div>
       <div class="workbench">
         <button v-show="!current" @click="toMaterialList">添加素材</button>
-        <div class="stage" v-if="current">
-          <div class="canvas">
-            <video ref="video" :src="current.material.url" crossorigin="use-credentials"
-              @durationchange="onFrameChange" @timeupdate="onTimeUpdate" muted></video>
-          </div>
-          <div class="stage-tool">
-            <button :disabled="current.saving || (!current.modified && current.id)" @click="save(current._guid)">保存</button>
-            <button @click="modify([current._guid])">修改测试</button>
-          </div>
-        </div>
+        <Stage v-if="current" ref="stage"
+          :guid="current._guid" :frame="currentFrame"
+          :size="current.material.properties"
+          :zoomSync.sync="zoom"
+          :panSync.sync="pan"
+          :imageData="current.masks[currentFrame]"
+          :readonly="playing || $wait.is('grabcut')"
+          @canvasChange="modifyMask"
+        >
+          <video slot="background" ref="video"
+            :src="current.material.url" crossorigin="use-credentials" muted
+            :style="{ transform: currentTransform }"
+            @durationchange="updateVideoTime"></video>
+          <template slot="tools">
+            <button :disabled="current.saving || (!current.modified && current.id)"
+              @click.prevent="save(current._guid)">保存</button>
+          </template>
+          <template slot="drawtools">
+            <button :disabled="$wait.is('grabcut') || !current.masks[currentFrame]"
+              @click.prevent="grabcut">Grab Cut</button>
+          </template>
+        </Stage>
         <div class="timeline" v-if="current">
-          <FrameControl :max="current.material.maxFrame" v-model.number="currentFrame" @input="onFrameChange">
-            <button @click="play">{{ playButton }}</button>
+          <FrameControl :max="current.material.maxFrame" :readonly="$wait.is('grabcut')" v-model.number="currentFrame">
+            <button :disabled="$wait.is('grabcut')" @click.prevent="play">{{ playButton }}</button>
           </FrameControl>
+          <div class="manual-frames">
+            <span v-for="frame in current.manualFrames" :key="frame">{{ frame }}
+              <img :src="current.material.frameThumb(frame)" crossorigin="use-credentials"
+                @click="!$wait.is('grabcut') ? currentFrame = Number(frame) : 0">
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -39,23 +61,32 @@
 <script>
 import { get, sync, call } from 'vuex-pathify'
 import { currentSync } from '@/utils/computedHelper'
+import { api } from '@/utils/api'
 
 import DashboardMenu from '@/components/DashboardMenu.vue'
 import FrameControl from '@/components/base/FrameControl.vue'
+import Stage from '@/components/base/Stage.vue'
 
 export default {
   name: 'Roto',
   components: {
     DashboardMenu,
     FrameControl,
+    Stage,
   },
   data: () => ({
     playing: false,
+    timer: false,
   }),
   computed: {
     ...get('rotos/*'),
     currentId: sync('rotos/currentId'),
     currentFrame: currentSync('rotos@viewConfig.currentFrame'),
+    zoom: currentSync('rotos@viewConfig.zoom'),
+    pan: currentSync('rotos@viewConfig.pan'),
+    currentTransform() {
+      return `scale(${this.zoom}) translate(${this.pan.x}px, ${this.pan.y}px)`;
+    },
     playButton() {
       return this.playing ? 'Stop' : 'Play';
     },
@@ -66,37 +97,76 @@ export default {
       this.$store.dispatch('useMaterial/set', ['/roto', ['videos']]);
       this.$router.push('/dashboard/videos');
     },
-    play() {
-      const video = this.$refs.video;
-      if (this.playing) {
-        video.pause();
+    modifyMask(data) {
+      if (data.url) {
+        data.manual = true;
+        this.update([this.currentId, 'masks.' + this.currentFrame, data]);
       } else {
-        video.play();
+        this.delete([this.currentId, 'masks.' + this.currentFrame]);
       }
-      this.playing = !this.playing;
+      this.$forceUpdate();  // current.masks 需要 deep watch 才能响应，索性直接更新了
+      // 已保存的抠像自动更新 mask
+      if (this.current.id) {
+        this.saveMask([this.current._guid, this.currentFrame, data]);
+      }
     },
-    // 播放时由 video 时间单向转换到帧
-    onTimeUpdate() {
+    grabcut() {
+      const imageUrl = this.$refs.stage.getImg();
+      // TODO: 检测必须同时有黑白像素
+      if (!imageUrl) {
+        return this.$notify({
+          group: 'top',
+          text: '请先标注图像前景和背景',
+        });
+      }
+      this.$wait.start('grabcut');
+      api.post('/roto/grabcut', {
+          material_id: this.current.material_id,
+          frame: this.currentFrame,
+          mask_url: imageUrl
+        }).then(imgUrl => {
+          this.$refs.stage.overlay(imgUrl);
+        }).finally(() => {
+          this.$wait.end('grabcut');
+        });
+    },
+    resetPreview() {
+      this.playing = false;
+      window.clearInterval(this.timer);
+      this.timer = false;
+    },
+    play() {
       if (this.playing) {
-        this.currentFrame = this.current.material.timeToFrame(this.$refs.video.currentTime);
+        this.resetPreview();
+      } else {
+        this.playing = true;
+        this.timer = window.setInterval(() => {
+          if (this.currentFrame >= this.current.material.maxFrame) {
+            this.resetPreview();
+            return;
+          }
+          ++ this.currentFrame;
+        }, 1000 / this.current.material.properties.fps);
       }
     },
-    // 暂停时由帧单向转换到 video 时间
-    onFrameChange() {
-      if (!this.playing && this.$refs.video) {
+    updateVideoTime() {
+      if (this.$refs.video) {
         this.$refs.video.currentTime = this.current.material.frameToTime(this.currentFrame);
       }
-    },
+    }
   },
   watch: {
     current() {
-      this.playing = false;
-      // 切换 current 时 video 尚未加载，不能修改时间，必须由 durationchange 事件触发
+      this.resetPreview();
+    },
+    // video 时间永远由 currentTime 决定，不允许自动播放
+    currentFrame() {
+      this.updateVideoTime();
     },
   },
   beforeRouteLeave (to, from, next) {
     // 导航离开该组件的对应路由时调用
-    this.playing = false;
+    this.resetPreview();
     next();
   },
 }
@@ -116,13 +186,6 @@ export default {
   .workbench {
     @include flex-col;
 
-    .stage {
-      @include flex-row;
-
-      .stage-tool {
-        flex: 0 0 30px;
-      }
-    }
     .timeline {
       flex: 0 0 100px;
     }
@@ -138,14 +201,11 @@ export default {
 
   .name {
     flex: 1;
+    word-break: break-all;  // keep width
     @include text-omit;
   }
   .close {
     flex: 0 0 26px;
   }
-}
-video {
-  max-width: 100%;
-  max-height: 100%;
 }
 </style>

@@ -11,7 +11,6 @@ export default function(obj) {
     _guid: uuid4(),
     masks: {},
     modified: false,
-    saving: false,
     viewConfig: {
       currentFrame: 0,
       zoom: 1,
@@ -21,6 +20,35 @@ export default function(obj) {
       },
     },
   });
+  obj.saving = false; // 强制初始化为 false，避免异常情况被持久化
+
+  try {
+    Object.defineProperties(obj, {
+      manualFrames: {
+        get() {
+          let result = [];
+          for (let frame in this.masks) {
+            if (this.masks[frame].manual) {
+              result.push(frame);
+            }
+          }
+          return result;
+        }
+      },
+      manualMasks: {
+        get() {
+          let masks = {};
+          for (let frame in this.masks) {
+            if (this.masks[frame].manual) {
+              masks[frame] = this.masks[frame];
+            }
+          }
+          return masks;
+        }
+      }
+    });
+  }
+  catch(e) {}
 
   if (obj.material) {
     Material(obj.material);

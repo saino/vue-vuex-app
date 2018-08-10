@@ -19,6 +19,13 @@ const getters = {
 const mutations = {
   ...make.mutations(state),
   ...listStore.mutations,
+  // overload for auto update modified field
+  update (state, [ id, pathOrDict, value ]) {
+    state.entities[id].batchSet(pathOrDict, value);
+    if (pathOrDict.modified === undefined) {
+      state.entities[id].modified = true;
+    }
+  },
 }
 
 const actions = {
@@ -31,7 +38,13 @@ const actions = {
   },
   save ({ state, commit }, guid) {
     commit('update', [guid, 'saving', true]);
-    return api.post('/roto/saveRoto', state.entities[guid].pick(['id', 'config', 'material_id']))
+    const entity = state.entities[guid];
+    let data = entity.pick(['id', 'material_id']);
+    // 首次保存时自动保存所有人工 mask
+    if (!entity.id) {
+      data['masks'] = entity.manualMasks;
+    }
+    return api.post('/roto/saveRoto', data)
       .then(resp => {
         Vue.notify({
           group: 'top',
@@ -39,15 +52,23 @@ const actions = {
         });
         commit('update', [guid, {
           id: resp,
-          saving: false,
           modified: false,
         }]);
+      })
+      .finally(() => {
+        commit('update', [guid, 'saving', false]);
       });
   },
-  // 所有可回溯的操作均调用该接口
-  modify ({ commit }, [guid, data]) {
-    commit('update', [guid, { ...data, modified: true }]);
-    // TODO: take snapshot
+  saveMask ({ state, commit }, [guid, frame, maskData]) {
+    commit('update', [guid, 'saving', true]);
+    return api.post('/roto/saveMask', {
+        id: state.entities[guid].id,
+        frame: frame,
+        mask: maskData,
+      })
+      .finally(() => {
+        commit('update', [guid, 'saving', false]);
+      });
   },
   addMaterial ({ commit }, material) {
     const newRoto = {

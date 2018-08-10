@@ -1,9 +1,10 @@
 <template>
   <div class="frame-control">
-    <button :disabled="state <= min" @click="change(state - 1)">Prev</button>
+    <button :disabled="readonly || state <= min" @click.prevent="change(state - 1)">Prev</button>
     <slot></slot>
-    <button :disabled="state >= max" @click="change(state + 1)">Next</button>
-    <input type="text" :value="state" @change="change($event.target.value)"> / {{max}}
+    <button :disabled="readonly || state >= max" @click.prevent="change(state + 1)">Next</button>
+    <input class="input" type="text" :value="state" :readonly="readonly" @change="change($event.target.value)">
+    <span class="divisor"> / {{max}}</span>
   </div>
 </template>
 
@@ -11,7 +12,8 @@
 export default {
   name: 'FrameControl',
   model: {
-    prop: 'state'
+    prop: 'state',
+    event: 'change',
   },
   props: {
     min: {
@@ -24,6 +26,9 @@ export default {
     state: {
       type: Number,
     },
+    readonly: {
+      type: Boolean
+    }
   },
   methods: {
     change (value) {
@@ -34,7 +39,7 @@ export default {
       }
       if (value != this.state) {
         // 不能直接修改该值，必须由父组件控制和 store 的通讯
-        this.$emit('input', value);
+        this.$emit('change', value);
       }
     }
   }
@@ -42,4 +47,15 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.frame-control > button {
+  padding: 5px;
+}
+.input {
+  text-align: right;
+  width: 40px;
+  font-size: 16px;
+}
+.divisor {
+  font-size: 16px;
+}
 </style>

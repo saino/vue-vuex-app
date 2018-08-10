@@ -12,6 +12,10 @@ ul {
   list-style: none;
 }
 
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 @mixin flex-row($wrap: nowrap) {
   display: flex;
   flex-flow: row $wrap;

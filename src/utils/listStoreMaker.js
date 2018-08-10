@@ -43,19 +43,16 @@ export default function(
         state[idsState].splice(index, 1);
       }
       if (state[currentIdState] === id) {
-        state[currentIdState] = false;
+        // auto select previous or next
+        state[currentIdState] = index > 0 ? state[idsState][index - 1] : (state[idsState][index] || false);
       }
       Vue.delete(state[entitiesState], id);
-    },
-    // 直接改 element，并不限定在当前 state 内，慎用
-    set (state, [ element, pathOrDict, value ]) {
-      element.batchSet(pathOrDict, value);
     },
     update (state, [ id, pathOrDict, value ]) {
       state[entitiesState][id].batchSet(pathOrDict, value);
     },
-    pathUpdate (state, [ keyPath, value ]) {
-      state.pathSet(keyPath, value);
+    delete (state, [ id, keyPath ]) {
+      state[entitiesState][id].pathDel(keyPath);
     },
     reExtend (state) {
       if (!entityExtender) return;
@@ -76,6 +73,7 @@ export default function(
     remove ({ commit }, id) {
       commit('remove', id);
     },
+    // base on vue-pathify simple mutations
     clear ({ commit }) {
       commit(idsState, []);
       commit(currentIdState, false);
@@ -86,8 +84,8 @@ export default function(
     update ({ commit }, [ id, pathOrDict, value ]) {
       commit('update', [ id, pathOrDict, value ]);
     },
-    pathUpdate ({ commit }, [ keyPath, value ]) {
-      commit('pathUpdate', [ keyPath, value ]);
+    delete ({ commit }, [ id, keyPath ]) {
+      commit('delete', [ id, keyPath ]);
     },
     reExtend ({ commit }) {
       commit('reExtend');

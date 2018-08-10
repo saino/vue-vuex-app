@@ -37,7 +37,7 @@ export default function(obj) {
       },
       frameThumb: {
         value(frame) {
-          return this.framePath + String(frame).padStart(5,'0') + '.jpg';
+          return `${this.framePath}thumb_${String(frame).padStart(5,'0')}.jpg`;
         }
       },
       frameToTime: {

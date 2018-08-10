@@ -9,7 +9,7 @@
             <span class="tab" :class="{active: isLoginForm}" @click="isLoginForm = true">登录</span>
             <span class="tab" :class="{active: !isLoginForm}" @click="isLoginForm = false">注册</span>
           </div>
-          <fieldset class="modal-form" v-wait:disabled="'auth'">
+          <fieldset class="modal-form" :disabled="$wait.is('auth')">
             <div>
               <input placeholder="手机号" type="text" name="phone"
                 v-model="form.phone"

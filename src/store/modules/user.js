@@ -39,8 +39,8 @@ const mutations = {
 const actions = {
   checkLogin ({ state, commit, dispatch }) {
     if (state.loggedIn) {
-      // 验证通过前不算已登录
-      commit('loggedIn', false);
+      // 鉴于验证速度比较快，保留登录状态，否则之后还要恢复 router
+      // commit('loggedIn', false);
       api.post('/user/refreshToken', {}, {
         // checkLogin 执行前尚未设置全局 token
         headers: {
@@ -49,7 +49,7 @@ const actions = {
         _silent: true
       }).then(token => {
         commit('updateToken', token);
-        commit('loggedIn', true);
+        // commit('loggedIn', true);
       }).catch(resp => {
         dispatch('logout');
       })
