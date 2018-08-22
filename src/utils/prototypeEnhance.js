@@ -16,8 +16,8 @@ Object.defineProperties(Object.prototype, {
       return this;
     }
   },
-  // @example  {a: 1, b: 2, c: 3}.pick(['a','b']) => {a: 1, b: 2}
-  pick: {
+  // @example  {a: 1, b: 2, c: 3}.pickKeys(['a','b']) => {a: 1, b: 2}
+  pickKeys: {
     value(keys) {
       const result = {};
       for (let key of keys) {

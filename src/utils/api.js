@@ -18,8 +18,10 @@ api.interceptors.response.use(function (response) {
     if (!originalRequest._silent) {
       Vue.notify({
         group: 'top',
+        type: 'error',
         title: 'API error',
-        text: error.response.data.errorMessage
+        text: error.response.data.errorMessage,
+        duration: 10000,
       })
     }
     return Promise.reject(error.response);

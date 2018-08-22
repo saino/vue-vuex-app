@@ -39,7 +39,7 @@ const actions = {
   save ({ state, commit }, guid) {
     commit('update', [guid, 'saving', true]);
     const entity = state.entities[guid];
-    let data = entity.pick(['id', 'material_id']);
+    let data = entity.pickKeys(['id', 'material_id']);
     // 首次保存时自动保存所有人工 mask
     if (!entity.id) {
       data['masks'] = entity.manualMasks;
@@ -54,6 +54,7 @@ const actions = {
           id: resp,
           modified: false,
         }]);
+        return resp;
       })
       .finally(() => {
         commit('update', [guid, 'saving', false]);

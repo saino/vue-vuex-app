@@ -14,26 +14,24 @@
         :src="imageData ? imageData.url : ''" crossorigin="use-credentials"
         :style="{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, opacity: opacity }">
     </div>
-    <div class="stage-tool" :class="{ masked: readonly }">
-      <div class="mask" v-show="readonly"></div>
-
+    <div class="stage-tool">
       <slot name="tools"></slot>
-      <button @click.prevent="undo" :disabled="!drew">Undo</button>
-      <button @click.prevent="redo" :disabled="!undoed">Redo</button>
+      <button @click.prevent="undo" :disabled="readonly || !drew">Undo</button>
+      <button @click.prevent="redo" :disabled="readonly || !undoed">Redo</button>
       <div class="spacing"></div>
 
       <button v-for="toolName in toolNames" :key="toolName"
         @click.prevent="activateTool(toolName)"
-        :disabled="currentTool == toolName">{{ toolName }}</button>
+        :disabled="readonly || currentTool == toolName">{{ toolName }}</button>
       <span>
         Brush:
-        <input type="number" min="1" :max="maxBrush" v-model.number="brushSize">
+        <input type="number" :disabled="readonly" min="1" :max="maxBrush" v-model.number="brushSize">
       </span>
       <slot name="drawtools"></slot>
       <div class="spacing"></div>
 
-      <button @click.prevent="opacity = 1" :disabled="opacity == 1">Mask Only</button>
-      <button @click.prevent="opacity = 0.6" :disabled="opacity == 0.6">Translucent</button>
+      <button @click.prevent="opacity = 1" :disabled="opacity == 1">Solid Mask</button>
+      <button @click.prevent="opacity = defaultOpacity" :disabled="opacity == defaultOpacity">Translucent</button>
       <button @click.prevent="opacity = 0" :disabled="opacity == 0">Hide Mask</button>
       <div class="spacing"></div>
 
@@ -47,14 +45,23 @@
       @keyup.slash="$modal.show('stage-shortkey')"
       @keyup.backquote="zoom = 1; pan = {x: 0, y: 0};"
       @keyup.space="activateTool('Pan')"
-      @keyup.num1="activateTool('DrawBG')"
-      @keyup.num2="activateTool('DrawFG')"
+      @keyup.b="activateTool('DrawBG')"
+      @keyup.f="activateTool('DrawFG')"
       @keydown.equal="brushSize += 1"
       @keydown.minus="brushSize -= 1"
+      @keyup.num1="brushSize = 1"
+      @keyup.num2="brushSize = 2"
+      @keyup.num3="brushSize = 3"
+      @keyup.num4="brushSize = 4"
+      @keyup.num5="brushSize = 5"
+      @keyup.num6="brushSize = 6"
+      @keyup.num7="brushSize = 7"
+      @keyup.num8="brushSize = 8"
+      @keyup.num9="brushSize = 9"
       @keyup.z="undo"
       @keyup.x="redo"
       @keyup.q="opacity = 1"
-      @keyup.w="opacity = 0.6"
+      @keyup.w="opacity = defaultOpacity"
       @keyup.e="opacity = 0"
       @keyup="onKey"
     />
@@ -98,6 +105,8 @@ export default {
     zoomRatio: 1.2,
     brushSize: 5,
     maxBrush: 100,
+    opacity: 0.4,
+    defaultOpacity: 0.4,
 
     // paper.js data
     drew: 0,  // 有手动绘画
@@ -105,26 +114,26 @@ export default {
     toolNames: [],
     currentTool: '',
 
-    opacity: 0.6,
     shortkeys: [
       ['/', 'Show this window'],
       ['`', 'Reset zoom and pan'],
-      ['Space', 'Pan Tool'],
-      ['1', 'Draw Background'],
-      ['2', 'Draw Foreground'],
+      ['Space', 'Pan'],
+      ['B', 'Draw Background'],
+      ['F', 'Draw Foreground'],
+      ['1~9', 'Brush size'],
       ['+ or =', 'Increase brush size'],
       ['-', 'Decrease brush size'],
       ['Z', 'Undo'],
       ['X', 'Redo'],
-      ['Q', 'Mask only'],
+      ['Q', 'Solid mask'],
       ['W', 'Translucent mask'],
       ['E', 'Hide mask'],
     ],
   }),
   // non-reactive data, need to be inited in mounted
+  cursorClip: undefined,
   clip: undefined,
   currentPath: undefined,
-  cursorCircle: undefined,
   undoPaths: [],
 
   computed: {
@@ -173,7 +182,7 @@ export default {
         _this.resetCursor();
       },
       onMouseMove(event) {
-        _this.cursorCircle.position = event.point;
+        _this.cursorClip.position = event.point;
       },
       onMouseDown(event) {
         _this.currentPath = (new _this.Path({
@@ -186,7 +195,7 @@ export default {
         _this.drew = 1;
       },
       onMouseDrag(event) {
-        _this.cursorCircle.position = event.point;
+        _this.cursorClip.position = event.point;
         _this.currentPath.add(event.point);
       },
       onMouseUp(event) {
@@ -199,7 +208,7 @@ export default {
         _this.resetCursor();
       },
       onMouseMove(event) {
-        _this.cursorCircle.position = event.point;
+        _this.cursorClip.position = event.point;
       },
       onMouseDown(event) {
         _this.currentPath = (new _this.Path({
@@ -212,7 +221,7 @@ export default {
         _this.drew = 1;
       },
       onMouseDrag(event) {
-        _this.cursorCircle.position = event.point;
+        _this.cursorClip.position = event.point;
         _this.currentPath.add(event.point);
       },
       onMouseUp(event) {
@@ -306,18 +315,46 @@ export default {
     },
     resetCursor() {
       if (!this.Path) return;
-      let pos = [0, 0];
-      if (this.cursorCircle) {
-        pos = this.cursorCircle.position;
-        this.cursorCircle.remove();
+      let pos = new paper.Point(0, 0);
+      if (this.cursorClip) {
+        pos = this.cursorClip.position;
+        this.cursorClip.remove();
       }
       if (this.currentTool != 'Pan') {
-        this.cursorCircle = new this.Path.Circle({
-          center: pos,
-          radius: Math.max((this.brushSize - 1) / 2, 1),
-          strokeColor: 'blue',
-          fillColor: new this.Color(this.currentTool == 'DrawFG' ? 0.9 : 0.1, 0.5),
-        });
+        const fg = this.currentTool == 'DrawFG';
+        const white = new this.Color(0.9, 0.8);
+        const black = new this.Color(0.1, 0.8);
+        const radius = Math.max((this.brushSize - 1) / 2, 1);
+        this.cursorClip = new this.Group([
+          // 内圈用画笔颜色
+          new this.Path.Circle({
+            center: pos,
+            radius: radius,
+            strokeWidth: 0.5,
+            strokeColor: fg ? white : black,
+            fillColor: fg ? white : black,
+          }),
+          // 外圈用相反颜色
+          new this.Path.Circle({
+            center: pos,
+            radius: radius + 0.25,
+            strokeWidth: 0.5,
+            strokeColor: fg ? black : white,
+          }),
+          // 准星用相反颜色
+          new this.Path.Line({
+            from: pos.subtract([0, radius / 4]),
+            to: pos.add([0, radius / 4]),
+            strokeWidth: 0.25,
+            strokeColor: fg ? black : white,
+          }),
+          new this.Path.Line({
+            from: pos.subtract([radius / 4, 0]),
+            to: pos.add([radius / 4, 0]),
+            strokeWidth: 0.25,
+            strokeColor: fg ? black : white,
+          }),
+        ]);
       }
     },
     mouseZoom(event) {
@@ -355,12 +392,6 @@ export default {
       if (this.readonly) return;
       this.load();
     },
-    readonly(val) {
-      // 取消只读时重新加载 canvas 数据
-      if (!val) {
-        this.load();
-      }
-    },
     brushSize: {
       immediate: true,
       handler(val) {
@@ -389,31 +420,12 @@ export default {
     left: 0;
   }
 }
-.foreground {
-  &.opacity {
-    opacity: 0.6;
-  }
-  &.hide {
-    display: none;
-  }
-}
 .stage-tool {
   flex: 0 0 30px;
   @include flex-col;
   position: relative;
   background-color: rgba(29, 54, 57, 0.4);
 
-  &.masked {
-    filter: blur(1px);
-  }
-  .mask {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.3);
-  }
   button {
     width: 100%;
     height: 40px;

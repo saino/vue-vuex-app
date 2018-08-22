@@ -3,8 +3,10 @@
     <button :disabled="readonly || state <= min" @click.prevent="change(state - 1)">Prev</button>
     <slot></slot>
     <button :disabled="readonly || state >= max" @click.prevent="change(state + 1)">Next</button>
+    <span class="main"> 当前第 </span>
     <input class="input" type="text" :value="state" :readonly="readonly" @change="change($event.target.value)">
     <span class="divisor"> / {{max}}</span>
+    <span class="main"> 帧</span>
   </div>
 </template>
 
@@ -47,15 +49,22 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.frame-control > button {
-  padding: 5px;
+.frame-control {
+  font-size: 12px;
+
+  & > button {
+    padding: 5px;
+  }
 }
 .input {
-  text-align: right;
+  text-align: center;
   width: 40px;
-  font-size: 16px;
+  font-size: 12px;
+  background-color: transparent;
+  border: 1px solid #fff;
+  color: #fff;
 }
-.divisor {
-  font-size: 16px;
+.main {
+  @include main-color;
 }
 </style>

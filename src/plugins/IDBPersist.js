@@ -27,7 +27,7 @@ export default function (options) {
         }
       }
       store.subscribe((mutations, state) => {
-        LocalForage.setItem(key, options.filterFields ? state.pick(options.filterFields) : state)
+        LocalForage.setItem(key, options.filterFields ? state.pickKeys(options.filterFields) : state)
       })
     })
   }

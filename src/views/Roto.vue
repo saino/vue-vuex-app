@@ -4,7 +4,7 @@
     <div class="wrapper">
       <div class="sidebar">
         <ul class="list">
-          <li class="list-item" @click="toMaterialList">
+          <li class="list-item add-material" @click="toMaterialList">
             添加素材
           </li>
           <li class="list-item"
@@ -18,15 +18,17 @@
           </li>
         </ul>
       </div>
-      <div class="workbench">
-        <button v-show="!current" @click="toMaterialList">添加素材</button>
-        <Stage v-if="current" ref="stage"
+
+      <button class="operation-button center" v-show="!current" @click="toMaterialList">添加抠像素材</button>
+
+      <div class="workbench" v-if="current">
+        <Stage ref="stage"
           :guid="current._guid" :frame="currentFrame"
           :size="current.material.properties"
           :zoomSync.sync="zoom"
           :panSync.sync="pan"
           :imageData="current.masks[currentFrame]"
-          :readonly="playing || $wait.is('grabcut')"
+          :readonly="readonly"
           @canvasChange="modifyMask"
         >
           <video slot="background" ref="video"
@@ -38,19 +40,47 @@
               @click.prevent="save(current._guid)">保存</button>
           </template>
           <template slot="drawtools">
-            <button :disabled="$wait.is('grabcut') || !current.masks[currentFrame]"
+            <button :disabled="readonly || !current.masks[currentFrame]"
               @click.prevent="grabcut">Grab Cut</button>
           </template>
         </Stage>
-        <div class="timeline" v-if="current">
-          <FrameControl :max="current.material.maxFrame" :readonly="$wait.is('grabcut')" v-model.number="currentFrame">
-            <button :disabled="$wait.is('grabcut')" @click.prevent="play">{{ playButton }}</button>
+        <div class="timeline">
+          <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame">
+            <button :disabled="lockframe" @click.prevent="play">{{ playButton }}</button>
           </FrameControl>
-          <div class="manual-frames">
-            <span v-for="frame in current.manualFrames" :key="frame">{{ frame }}
-              <img :src="current.material.frameThumb(frame)" crossorigin="use-credentials"
-                @click="!$wait.is('grabcut') ? currentFrame = Number(frame) : 0">
-            </span>
+        </div>
+      </div>
+
+      <div class="operation" v-if="current">
+        <button class="operation-button" @click.prevent="aiRoto"
+          :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.ai)">开始云端智能抠像</button>
+        <label class="label" v-show="current.jobStatus.ai == $JOB.QUEUE">智能抠像任务排队中</label>
+        <progress-bar v-show="current.jobStatus.ai == $JOB.RUNNING"
+          size="medium" text-position="inside" text-fg-color="#fff"
+          :val="current.progress" :text="current.progress + '%'" />
+        <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
+
+        <div>
+          <label class="label">已抠像的关键帧序列</label>
+          <ul class="manual-frames">
+            <li v-for="frame in current.manualFrames" :key="frame"
+              class="frame-thumb" :class="{ active: currentFrame == frame }"
+              @click="!lockframe ? currentFrame = Number(frame) : 0">
+              <img :src="current.material.frameThumb(frame)" crossorigin="use-credentials">
+              <span class="frame-hover">{{ frame }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="export-operations" v-show="current.id && current.jobStatus.ai == $JOB.DONE">
+          <button class="operation-button" @click.prevent="exportMaterial"
+             :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.export)">开始生成抠像素材</button>
+          <progress-bar v-show="current.jobStatus.export == $JOB.RUNNING"
+            size="medium" text-position="inside" text-fg-color="#fff"
+            :val="current.progress" :text="current.progress + '%'" />
+          <div v-show="current.jobStatus.export == $JOB.DONE">
+            <a class="operation-button download" :href="current.exportWebm" target="_blank">下载抠像素材</a>
+            <a class="operation-button download" :href="current.exportPng" target="_blank">下载PNG序列帧</a>
           </div>
         </div>
       </div>
@@ -62,7 +92,10 @@
 import { get, sync, call } from 'vuex-pathify'
 import { currentSync } from '@/utils/computedHelper'
 import { api } from '@/utils/api'
+import pollProgress from '@/utils/progressHelper'
+import JobStatus from '@/utils/jobConst'
 
+import ProgressBar from 'vue-simple-progress'
 import DashboardMenu from '@/components/DashboardMenu.vue'
 import FrameControl from '@/components/base/FrameControl.vue'
 import Stage from '@/components/base/Stage.vue'
@@ -73,6 +106,7 @@ export default {
     DashboardMenu,
     FrameControl,
     Stage,
+    ProgressBar,
   },
   data: () => ({
     playing: false,
@@ -90,6 +124,14 @@ export default {
     playButton() {
       return this.playing ? 'Stop' : 'Play';
     },
+    readonly() {
+      const jobRunning = [this.$JOB.QUEUE, this.$JOB.RUNNING];
+      return this.playing || this.$wait.is('grabcut') || (this.current &&
+        (jobRunning.has(this.current.jobStatus.ai) || jobRunning.has(this.current.jobStatus.export)));
+    },
+    lockframe() {
+      return this.$wait.is('grabcut');
+    },
   },
   methods: {
     ...call('rotos/*'),
@@ -105,9 +147,9 @@ export default {
         this.delete([this.currentId, 'masks.' + this.currentFrame]);
       }
       this.$forceUpdate();  // current.masks 需要 deep watch 才能响应，索性直接更新了
-      // 已保存的抠像自动更新 mask
-      if (this.current.id) {
-        this.saveMask([this.current._guid, this.currentFrame, data]);
+      // 已保存的抠像自动更新人工 mask
+      if (this.current.id && data.manual) {
+        this.saveMask([this.currentId, this.currentFrame, data]);
       }
     },
     grabcut() {
@@ -116,7 +158,9 @@ export default {
       if (!imageUrl) {
         return this.$notify({
           group: 'top',
+          type: 'warn',
           text: '请先标注图像前景和背景',
+          duration: 5000,
         });
       }
       this.$wait.start('grabcut');
@@ -130,6 +174,71 @@ export default {
           this.$wait.end('grabcut');
         });
     },
+    jobFinish(guid, success, jobText) {
+      this.update([guid, 'jobStatus.export', success ? this.$JOB.DONE : this.$JOB.FAILED]);
+      const name = this.entities[guid].material.name;
+      this.$notify({
+        group: 'top',
+        type: success ? 'success' : 'error',
+        text: success ? `${name} ${jobText}完成` : `${name} ${jobText}失败`,
+        duration: -1,
+      });
+    },
+    aiRoto() {
+      if (Object.keys(this.current.manualFrames).length == 0) {
+        return this.$notify({
+          group: 'top',
+          type: 'warn',
+          text: '请至少手工标注一帧图像',
+          duration: 5000,
+        });
+      }
+      const guid = this.currentId;  // 允许任务进行中切换
+      const promise = this.current.id ? Promise.resolve(this.current.id) : this.save(guid);
+      promise.then(rotoId => {
+        api.post('/roto/aiRoto', {id: rotoId}).then(() => {
+          this.update([guid, 'jobStatus.ai', this.$JOB.QUEUE]);
+          pollProgress('roto', rotoId,
+            progress => {
+              if (progress > 0) {
+                this.update([guid, 'jobStatus.ai', this.$JOB.RUNNING]);
+                this.update([guid, 'progress', progress]);
+              }
+            },
+            success => {
+              api.post('/roto/loadRoto', {id: rotoId})
+                .then(resp => {
+                  this.update([guid, 'masks', resp.masks]);
+                  this.jobFinish(guid, success, '智能抠像');
+                });
+            });
+        });
+      });
+    },
+    clearAiMask() {
+      for (let frame in this.current.masks) {
+        if (!this.current.masks[frame].manual) {
+          this.delete([this.currentId, 'masks.' + frame]);
+        }
+      }
+    },
+    exportMaterial() {
+      const guid = this.currentId;  // 允许任务进行中切换
+      const rotoId = this.current.id;
+      api.post('/roto/finishRoto', {id: rotoId}).then(() => {
+        this.update([guid, 'jobStatus.export', this.$JOB.QUEUE]);
+        pollProgress('export', rotoId,
+          progress => {
+            if (progress > 0) {
+              this.update([guid, 'jobStatus.export', this.$JOB.RUNNING]);
+              this.update([guid, 'progress', progress]);
+            }
+          },
+          success => {
+            this.jobFinish(guid, success, '生成抠像素材');
+          });
+      });
+    },
     resetPreview() {
       this.playing = false;
       window.clearInterval(this.timer);
@@ -138,6 +247,8 @@ export default {
     play() {
       if (this.playing) {
         this.resetPreview();
+        // 强制 Stage 重新加载当前帧（不在 Stage 里 watch readonly 的原因是会和 grabcut 导致的 readonly 冲突）
+        this.$refs.stage.load();
       } else {
         this.playing = true;
         this.timer = window.setInterval(() => {
@@ -150,7 +261,7 @@ export default {
       }
     },
     updateVideoTime() {
-      if (this.$refs.video) {
+      if (this.$refs.video && this.current) {
         this.$refs.video.currentTime = this.current.material.frameToTime(this.currentFrame);
       }
     }
@@ -188,6 +299,19 @@ export default {
 
     .timeline {
       flex: 0 0 100px;
+      background-color: #0e1b20;
+      color: #fff;
+    }
+  }
+  .operation {
+    flex: 0 0 240px;
+    @include flex-col;
+    position: relative;
+    background-color: #264246;
+    z-index: 0; // hack for vue-simple-progress
+
+    .export-operations {
+      flex: 0;
     }
   }
 }
@@ -206,6 +330,66 @@ export default {
   }
   .close {
     flex: 0 0 26px;
+  }
+  &.add-material {
+    @include main-color;
+    background: rgba(89,154,157,0.40);
+  }
+}
+.operation-button {
+  height: 40px;
+  width: 100%;
+  border: none;
+  font-size: 14px;
+  @include main-color;
+  @include button-gradient;
+
+  &[disabled] {
+    color: rgba(0, 0, 0, 0.25);
+  }
+  &.center {
+    width: 200px;
+    margin: auto;
+  }
+  &.download {
+    display: inline-block;
+    width: 50%;
+    line-height: 40px;
+  }
+}
+.label {
+  display: block;
+  margin: 18px;
+  font-size: 12px;
+  @include main-color;
+}
+.manual-frames {
+  @include puregrid(50px);
+}
+.frame-thumb {
+  position: relative;
+  cursor: pointer;
+
+  &.active {
+    border: 1px solid yellow;
+  }
+  &:hover .frame-hover {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .frame-hover {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid #fff;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
   }
 }
 </style>

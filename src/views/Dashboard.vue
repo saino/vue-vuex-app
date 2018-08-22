@@ -7,13 +7,13 @@
           <span class="phone">{{ user.info.phone }}</span>
         </div>
         <ul class="menu">
-          <li class="menu-item" v-show="target" @click="$router.push(target)">&lt; 返回制作</li>
+          <li class="menu-item main" v-show="target" @click="$router.push(target)">&lt; 返回制作</li>
           <li class="menu-item" v-for="(title, tab) of tabs" :key="tab" v-show="!target || filter.has(tab)"
             :class="{ active: tab == currentTab }" @click="$router.push(`/dashboard/${tab}`)">
             {{ title }}
           </li>
         </ul>
-        <div class="menu-item logout" @click="logout" v-show="!target">退出登录</div>
+        <div class="menu-item logout main" @click="logout" v-show="!target">退出登录</div>
       </div>
       <div class="panel">
         <!-- <WorkList v-show="currentTab == 'works'" /> -->
@@ -80,6 +80,8 @@ export default {
 
     .profile {
       flex: 0 0 200px;
+      padding: 10px;
+      color: #818B8A;
     }
   }
 }
@@ -89,8 +91,13 @@ export default {
 }
 .menu-item {
   @include sidebar-item;
+
+  &.main {
+    @include main-color;
+  }
 }
 .logout {
   flex: 0 0 40px;
+  @include button-gradient;
 }
 </style>
