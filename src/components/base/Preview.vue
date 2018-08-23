@@ -5,6 +5,7 @@
     width="80%" height="auto"
     @before-open="beforeOpen">
     <div class="preview-panel">
+      <audio v-if="type == 'audio'" :src="url" controls crossorigin="use-credentials"></audio>
       <video v-if="type == 'video'" :src="url" controls crossorigin="use-credentials"></video>
       <img v-if="type == 'image'" :src="url" crossorigin="use-credentials">
     </div>

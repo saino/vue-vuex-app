@@ -39,20 +39,17 @@ const mutations = {
 const actions = {
   checkLogin ({ state, commit, dispatch }) {
     if (state.loggedIn) {
+      // 必须提前设置，否则 Dashboard 组件自动加载时会没有 token
+      setToken(state.info.token);
       // 鉴于验证速度比较快，保留登录状态，否则之后还要恢复 router
       // commit('loggedIn', false);
-      api.post('/user/refreshToken', {}, {
-        // checkLogin 执行前尚未设置全局 token
-        headers: {
-          token: state.info.token
-        },
-        _silent: true
-      }).then(token => {
-        commit('updateToken', token);
-        // commit('loggedIn', true);
-      }).catch(resp => {
-        dispatch('logout');
-      })
+      api.post('/user/refreshToken', {}, { _silent: true })
+        .then(token => {
+          commit('updateToken', token);
+          // commit('loggedIn', true);
+        }).catch(resp => {
+          dispatch('logout');
+        })
     }
   },
   login ({ commit }, form) {

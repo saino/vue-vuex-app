@@ -1,7 +1,7 @@
 <template>
   <div class="authorization">
-    <button @click="isLoginForm = true; $modal.show('auth')">登录</button>
-    <button @click="isLoginForm = false; $modal.show('auth')">注册</button>
+    <a class="button" @click="isLoginForm = true; $modal.show('auth')">登录</a> | 
+    <a class="button" @click="isLoginForm = false; $modal.show('auth')">注册</a>
     <modal name="auth" :width="300" :height="200">
       <form autocomplete="false" action="javascript:;" @submit.prevent="validateBeforeSubmit">
         <div class="modal">
@@ -74,6 +74,11 @@ export default {
 <style scoped lang="scss">
 .authorization {
   display: inline;
+  flex: 0 0 100px;
+  color: #fff;
+}
+.button {
+  cursor: pointer;
 }
 .tab {
   padding: 10px;

@@ -1,10 +1,13 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link> |
-      <router-link to="/dashboard" v-if="$store.state.user.loggedIn">Dashboard</router-link>
-      <Authorization v-if="!$store.state.user.loggedIn"/>
+    <div class="nav">
+      <router-link to="/" class="home">LIANGZIVFX</router-link>
+      <router-link to="/roto" v-if="user.loggedIn">智能抠像</router-link>
+      <!-- <router-link to="/vfx" v-if="user.loggedIn">特效制作</router-link>-->
+      <!-- <router-link to="/about">联系我们</router-link> -->
+      <div class="spacing"></div>
+      <router-link to="/dashboard" v-if="user.loggedIn">个人中心</router-link>
+      <Authorization v-if="!user.loggedIn"/>
     </div>
 
     <keep-alive>
@@ -18,6 +21,8 @@
 </template>
 
 <script>
+import { get } from 'vuex-pathify'
+
 import Authorization from '@/components/Authorization.vue'
 import Preview from '@/components/base/Preview.vue'
 
@@ -27,10 +32,13 @@ export default {
     Authorization,
     Preview
   },
+  computed: {
+    user: get('user'),
+  },
 }
 </script>
 
-<style lang="scss">
+<style scoped lang="scss">
 #app {
   position: absolute;
   left: 0;
@@ -40,22 +48,27 @@ export default {
   width: 100%;
   height: 100%;
   @include flex-col;
-
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
 }
-#nav {
-  flex: 0 0 10px;
-  padding: 10px;
+.nav {
+  flex: 0 0 50px;
+  @include flex-row;
+  align-items: center;
+  background-image: radial-gradient(ellipse farthest-corner at 50% 1450%, #00141a, #010104);
+
   a {
+    padding: 0 20px;
     font-weight: bold;
-    color: #2c3e50;
-    &.router-link-exact-active {
-      color: #42b983;
+    color: #fff;
+    &.router-link-active {
+      @include main-color;
     }
+    &.home {
+      width: 160px;
+      color: rgb(67,124,127);
+    }
+  }
+  .spacing {
+    flex: 1;
   }
 }
 </style>

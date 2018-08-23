@@ -1,27 +1,24 @@
 <template>
   <div class="dashboard" v-show="user.loggedIn">
-    <DashboardMenu />
-    <div class="wrapper">
-      <div class="sidebar">
-        <div class="profile" v-show="!target">
-          <span class="phone">{{ user.info.phone }}</span>
-        </div>
-        <ul class="menu">
-          <li class="menu-item main" v-show="target" @click="$router.push(target)">&lt; 返回制作</li>
-          <li class="menu-item" v-for="(title, tab) of tabs" :key="tab" v-show="!target || filter.has(tab)"
-            :class="{ active: tab == currentTab }" @click="$router.push(`/dashboard/${tab}`)">
-            {{ title }}
-          </li>
-        </ul>
-        <div class="menu-item logout main" @click="logout" v-show="!target">退出登录</div>
+    <div class="sidebar">
+      <div class="profile" v-show="!target">
+        <span class="phone">{{ user.info.phone }}</span>
       </div>
-      <div class="panel">
-        <!-- <WorkList v-show="currentTab == 'works'" /> -->
-        <!-- <RotoList v-show="currentTab == 'rotos'" /> -->
-        <MaterialList :types="'video'" v-show="currentTab == 'videos'" />
-        <MaterialList :types="'image'" v-show="currentTab == 'images'" />
-        <MaterialList :types="'audio'" v-show="currentTab == 'audios'" />
-      </div>
+      <ul class="menu">
+        <li class="menu-item main" v-show="target" @click="$router.push(target)">&lt; 返回制作</li>
+        <li class="menu-item" v-for="(title, tab) of tabs" :key="tab" v-show="!target || filter.has(tab)"
+          :class="{ active: tab == currentTab }" @click="$router.push(`/dashboard/${tab}`)">
+          {{ title }}
+        </li>
+      </ul>
+      <div class="menu-item logout main" @click="logout" v-show="!target">退出登录</div>
+    </div>
+    <div class="panel">
+      <!-- <WorkList v-show="currentTab == 'works'" /> -->
+      <RotoList v-show="currentTab == 'rotos'" />
+      <MaterialList :types="'video'" v-show="currentTab == 'videos'" />
+      <MaterialList :types="'image'" v-show="currentTab == 'images'" />
+      <MaterialList :types="'audio'" v-show="currentTab == 'audios'" />
     </div>
   </div>
 </template>
@@ -29,14 +26,14 @@
 <script>
 import { get } from 'vuex-pathify'
 
-import DashboardMenu from '@/components/DashboardMenu.vue'
 import MaterialList from '@/components/MaterialList.vue'
+import RotoList from '@/components/RotoList.vue'
 
 export default {
   name: 'dashboard',
   components: {
-    DashboardMenu,
     MaterialList,
+    RotoList,
   },
   props: {
     currentTab: {
@@ -68,9 +65,6 @@ export default {
 
 <style scoped lang="scss">
 .dashboard {
-  @include flex-col;
-}
-.wrapper {
   @include flex-row;
 
   .sidebar {
@@ -81,8 +75,14 @@ export default {
     .profile {
       flex: 0 0 200px;
       padding: 10px;
-      color: #818B8A;
+      @include desc-color;
     }
+  }
+
+  .panel {
+    background-color: #031016;
+    font-size: 12px;
+    color: #fff;
   }
 }
 .menu {

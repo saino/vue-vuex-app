@@ -1,5 +1,6 @@
 import moment from "moment";
 import "moment-duration-format";
+import filesize from "filesize";
 
 import { HOST } from '@/config'
 
@@ -32,7 +33,15 @@ export default function(obj) {
           if (!this.properties.duration) {
             return "";
           }
-          return moment.duration(Number(this.properties.duration), 'seconds').format("hh:mm:ss.SSS", {trim: false});
+          return moment.duration(Number(this.properties.duration), 'seconds').format("hh:mm:ss", {trim: false});
+        }
+      },
+      formattedSize: {
+        get() {
+          if (!this.properties.filesize) {
+            return "";
+          }
+          return filesize(this.properties.filesize, {round: 0, spacer: ''});
         }
       },
       frameThumb: {

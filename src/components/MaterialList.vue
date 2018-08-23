@@ -2,21 +2,22 @@
   <div class="list"
     v-infinite-scroll="loadMore" infinite-scroll-disabled="cantLoad" infinite-scroll-distance="10">
     <ul>
-      <li class="material" v-for="(item, index) of list" :key="item.id">
+      <li class="material" :class="{ [types]: true }" v-for="(item, index) of list" :key="item.id">
+        <button class="select" @click="select(item)" v-if="target"></button>
         <div class="thumb" v-if="item.type != 'audio'">
           <img :src="item.thumbUrl">
         </div>
-        <div v-if="item.type == 'audio'">
-          <audio :src="item.url" controls></audio>
-        </div>
         <div class="operation">
-          <i class="icon icon-preview" v-if="item.type != 'audio'" @click="$modal.show('preview', item)">预览</i>
+          <i class="icon icon-preview" @click="$modal.show('preview', item)">预览</i>
           <i class="icon icon-delete" @click="$cfm(`确定删除素材 ${item.name} ?`, () => remove(index))">删除</i>
-          <i class="icon icon-select" @click="select(item)" v-if="target">选择</i>
         </div>
         <div class="info">
-          <span class="name">{{ item.name }}</span>&nbsp;
-          <span class="duration">{{ item.formattedDuration }}</span>
+          <p class="name">{{ item.name }}</p>
+          <p class="detail">
+            <span>{{ item.properties.format }}</span>
+            <span>{{ item.formattedSize }}</span>
+            <span>{{ item.type == 'image' ? `${item.properties.width}x${item.properties.height}` : item.formattedDuration }}</span>
+          </p>
         </div>
       </li>
     </ul>
@@ -62,15 +63,39 @@ export default {
 
 <style scoped lang="scss">
 ul {
-  @include puregrid;
+  @include puregrid(147px, 15px);
 }
 li.material {
   @include dashboard-item;
-}
-.icon {
-  border: 1px solid #fff;
-  color: #fff;
-  padding: 5px;
-  cursor: pointer;
+
+  &.audio {
+    height: 70px;
+
+    .operation {
+      top: 50px;
+    }
+  }
+  &:hover .select {
+    display: block;
+  }
+  .select {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    border: none;
+  }
+
+  .detail {
+    display: table;
+    border-spacing: 5px 0;
+    width: 100%;
+    span {
+      display: table-cell;
+    }
+  }
 }
 </style>

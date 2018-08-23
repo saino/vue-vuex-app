@@ -1,87 +1,84 @@
 <template>
   <div class="roto">
-    <DashboardMenu />
-    <div class="wrapper">
-      <div class="sidebar">
-        <ul class="list">
-          <li class="list-item add-material" @click="toMaterialList">
-            添加素材
-          </li>
-          <li class="list-item"
-            v-for="(roto, guid) of entities" :key="guid"
-            :class="{ active: currentId === guid }"
-            @click="currentId = guid">
-            <span class="name" :title="roto.material.name">
-              <i v-if="roto.modified">* </i>{{ roto.material.name }}
-            </span>
-            <button class="close" @click.stop="$cfmWhen(roto.modified, '抠像尚未保存，确定关闭?', () => remove(guid))">关闭</button>
+    <div class="sidebar">
+      <ul class="list">
+        <li class="list-item add-material" @click="toMaterialList">
+          添加素材
+        </li>
+        <li class="list-item"
+          v-for="(roto, guid) of entities" :key="guid"
+          :class="{ active: currentId === guid }"
+          @click="currentId = guid">
+          <span class="name" :title="roto.material.name">
+            <i v-if="roto.modified">* </i>{{ roto.material.name }}
+          </span>
+          <button class="close" @click.stop="$cfmWhen(roto.modified, '抠像尚未保存，确定关闭?', () => remove(guid))">关闭</button>
+        </li>
+      </ul>
+    </div>
+
+    <button class="operation-button center" v-show="!current" @click="toMaterialList">添加抠像素材</button>
+
+    <div class="workbench" v-if="current">
+      <Stage ref="stage"
+        :guid="current._guid" :frame="currentFrame"
+        :size="current.material.properties"
+        :zoomSync.sync="zoom"
+        :panSync.sync="pan"
+        :imageData="current.masks[currentFrame]"
+        :readonly="readonly"
+        @canvasChange="modifyMask"
+      >
+        <video slot="background" ref="video"
+          :src="current.material.videoUrl" crossorigin="use-credentials" muted
+          :style="{ transform: currentTransform }"
+          @durationchange="updateVideoTime"></video>
+        <template slot="tools">
+          <button :disabled="current.saving || (!current.modified && current.id)"
+            @click.prevent="save(current._guid)">保存</button>
+        </template>
+        <template slot="drawtools">
+          <button :disabled="readonly || !current.masks[currentFrame]"
+            @click.prevent="grabcut">Grab Cut</button>
+        </template>
+      </Stage>
+      <div class="timeline">
+        <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame">
+          <button :disabled="lockframe" @click.prevent="play">{{ playButton }}</button>
+        </FrameControl>
+      </div>
+    </div>
+
+    <div class="operation" v-if="current">
+      <button class="operation-button" @click.prevent="aiRoto"
+        :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.ai)">开始云端智能抠像</button>
+      <label class="label" v-show="current.jobStatus.ai == $JOB.QUEUE">智能抠像任务排队中</label>
+      <progress-bar v-show="current.jobStatus.ai == $JOB.RUNNING"
+        size="medium" text-position="inside" text-fg-color="#fff"
+        :val="current.progress" :text="current.progress + '%'" />
+      <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
+
+      <div>
+        <label class="label">已抠像的关键帧序列</label>
+        <ul class="manual-frames">
+          <li v-for="frame in current.manualFrames" :key="frame"
+            class="frame-thumb" :class="{ active: currentFrame == frame }"
+            @click="!lockframe ? currentFrame = Number(frame) : 0">
+            <img :src="current.material.frameThumb(frame)" crossorigin="use-credentials">
+            <span class="frame-hover">{{ frame }}</span>
           </li>
         </ul>
       </div>
 
-      <button class="operation-button center" v-show="!current" @click="toMaterialList">添加抠像素材</button>
-
-      <div class="workbench" v-if="current">
-        <Stage ref="stage"
-          :guid="current._guid" :frame="currentFrame"
-          :size="current.material.properties"
-          :zoomSync.sync="zoom"
-          :panSync.sync="pan"
-          :imageData="current.masks[currentFrame]"
-          :readonly="readonly"
-          @canvasChange="modifyMask"
-        >
-          <video slot="background" ref="video"
-            :src="current.material.url" crossorigin="use-credentials" muted
-            :style="{ transform: currentTransform }"
-            @durationchange="updateVideoTime"></video>
-          <template slot="tools">
-            <button :disabled="current.saving || (!current.modified && current.id)"
-              @click.prevent="save(current._guid)">保存</button>
-          </template>
-          <template slot="drawtools">
-            <button :disabled="readonly || !current.masks[currentFrame]"
-              @click.prevent="grabcut">Grab Cut</button>
-          </template>
-        </Stage>
-        <div class="timeline">
-          <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame">
-            <button :disabled="lockframe" @click.prevent="play">{{ playButton }}</button>
-          </FrameControl>
-        </div>
-      </div>
-
-      <div class="operation" v-if="current">
-        <button class="operation-button" @click.prevent="aiRoto"
-          :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.ai)">开始云端智能抠像</button>
-        <label class="label" v-show="current.jobStatus.ai == $JOB.QUEUE">智能抠像任务排队中</label>
-        <progress-bar v-show="current.jobStatus.ai == $JOB.RUNNING"
+      <div class="export-operations" v-show="current.id && current.jobStatus.ai == $JOB.DONE">
+        <button class="operation-button" @click.prevent="exportMaterial"
+           :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.export)">开始生成抠像素材</button>
+        <progress-bar v-show="current.jobStatus.export == $JOB.RUNNING"
           size="medium" text-position="inside" text-fg-color="#fff"
           :val="current.progress" :text="current.progress + '%'" />
-        <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
-
-        <div>
-          <label class="label">已抠像的关键帧序列</label>
-          <ul class="manual-frames">
-            <li v-for="frame in current.manualFrames" :key="frame"
-              class="frame-thumb" :class="{ active: currentFrame == frame }"
-              @click="!lockframe ? currentFrame = Number(frame) : 0">
-              <img :src="current.material.frameThumb(frame)" crossorigin="use-credentials">
-              <span class="frame-hover">{{ frame }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="export-operations" v-show="current.id && current.jobStatus.ai == $JOB.DONE">
-          <button class="operation-button" @click.prevent="exportMaterial"
-             :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.export)">开始生成抠像素材</button>
-          <progress-bar v-show="current.jobStatus.export == $JOB.RUNNING"
-            size="medium" text-position="inside" text-fg-color="#fff"
-            :val="current.progress" :text="current.progress + '%'" />
-          <div v-show="current.jobStatus.export == $JOB.DONE">
-            <a class="operation-button download" :href="current.exportWebm" target="_blank">下载抠像素材</a>
-            <a class="operation-button download" :href="current.exportPng" target="_blank">下载PNG序列帧</a>
-          </div>
+        <div v-show="current.jobStatus.export == $JOB.DONE">
+          <a class="operation-button download" :href="current.exportWebm" target="_blank">下载抠像素材</a>
+          <a class="operation-button download" :href="current.exportPng" target="_blank">下载PNG序列帧</a>
         </div>
       </div>
     </div>
@@ -96,14 +93,12 @@ import pollProgress from '@/utils/progressHelper'
 import JobStatus from '@/utils/jobConst'
 
 import ProgressBar from 'vue-simple-progress'
-import DashboardMenu from '@/components/DashboardMenu.vue'
 import FrameControl from '@/components/base/FrameControl.vue'
 import Stage from '@/components/base/Stage.vue'
 
 export default {
   name: 'Roto',
   components: {
-    DashboardMenu,
     FrameControl,
     Stage,
     ProgressBar,
@@ -285,9 +280,6 @@ export default {
 
 <style scoped lang="scss">
 .roto {
-  @include flex-col;
-}
-.wrapper {
   @include flex-row;
 
   .sidebar {
@@ -374,9 +366,7 @@ export default {
     border: 1px solid yellow;
   }
   &:hover .frame-hover {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    @include center;
   }
   .frame-hover {
     display: none;

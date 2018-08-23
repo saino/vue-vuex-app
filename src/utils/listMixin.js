@@ -43,5 +43,20 @@ export default (loadPath, deletePath, extender) => ({
           this.list.splice(index, 1); // TODO: 改成重新按 ID 搜索，否则异步回调时序号可能已发生变化
         });
     },
+    reset() {
+      this.list = [];
+      this.page = 0;
+      this.total = 0;
+      this.allLoaded = false;
+      this.busy = false;
+    },
+  },
+  watch: {
+    'user.loggedIn': function(val) {
+      // 登出自动清空列表
+      if (!val) {
+        this.reset();
+      }
+    }
   },
 })
