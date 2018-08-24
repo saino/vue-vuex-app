@@ -1,6 +1,5 @@
-import moment from "moment";
-import "moment-duration-format";
 import filesize from "filesize";
+import { durationFormat } from "@/utils/helper";
 
 import { HOST } from '@/config'
 
@@ -33,7 +32,7 @@ export default function(obj) {
           if (!this.properties.duration) {
             return "";
           }
-          return moment.duration(Number(this.properties.duration), 'seconds').format("hh:mm:ss", {trim: false});
+          return durationFormat(this.properties.duration);
         }
       },
       formattedSize: {

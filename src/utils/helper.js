@@ -14,3 +14,11 @@ export const clamp = (number, lower, upper) => {
   }
   return number
 }
+
+export const durationFormat = seconds => {
+  seconds = +seconds
+  const hour = Math.floor(seconds / 3600) + ''
+  const minute = Math.floor(seconds % 3600 / 60) + ''
+  const second = Math.floor(seconds % 3600 % 60) + ''
+  return `${hour.padStart(2, 0)}:${minute.padStart(2, 0)}:${second.padStart(2, 0)}`
+}

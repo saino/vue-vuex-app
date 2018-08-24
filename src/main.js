@@ -22,7 +22,15 @@ Vue.use(infiniteScroll)
 import vuewheel from 'vuewheel'
 Vue.use(vuewheel)
 
-import VeeValidate from 'vee-validate'
+import zh_CN from 'vee-validate/dist/locale/zh_CN'
+import VeeValidate, { Validator } from 'vee-validate'
+Validator.localize('zh_CN', zh_CN)
+Validator.localize('zh_CN', {
+  name: 'zh_CN',
+  messages: {
+    is: (field) => `两次填写的${field}不相同`,
+  },
+})
 Vue.use(VeeValidate)
 
 import VueConfirm from '@/plugins/VueConfirm'

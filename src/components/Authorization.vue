@@ -2,47 +2,58 @@
   <div class="authorization">
     <a class="button" @click="isLoginForm = true; $modal.show('auth')">登录</a> | 
     <a class="button" @click="isLoginForm = false; $modal.show('auth')">注册</a>
-    <modal name="auth" :width="300" :height="200">
-      <form autocomplete="false" action="javascript:;" @submit.prevent="validateBeforeSubmit">
-        <div class="modal">
-          <div class="modal-title">
-            <span class="tab" :class="{active: isLoginForm}" @click="isLoginForm = true">登录</span>
-            <span class="tab" :class="{active: !isLoginForm}" @click="isLoginForm = false">注册</span>
-          </div>
-          <fieldset class="modal-form" :disabled="$wait.is('auth')">
-            <div>
-              <input placeholder="手机号" type="text" name="phone"
-                v-model="form.phone"
-                v-validate="'required|digits:11'"
-                :class="{'input': true, 'is-danger': errors.has('phone') }">
-              <span v-show="errors.has('phone')">{{ errors.first('phone') }}</span>
-            </div>
-            <div>
-              <input placeholder="密码" type="password" name="password"
-                v-model="form.password"
-                v-validate="'required|min:3'"
-                :class="{'input': true, 'is-danger': errors.has('password') }">
-              <span v-show="errors.has('password')">{{ errors.first('password') }}</span>
-            </div>
-            <div v-if="!isLoginForm">
-              <input placeholder="确认密码" type="password" name="password-cfm"
-                v-model="form.passwordCfm"
-                v-validate="{ is: form.password }"
-                :class="{'input': true, 'is-danger': errors.has('password-cfm') }">
-              <span v-show="errors.has('password-cfm')">{{ errors.first('password-cfm') }}</span>
-            </div>
-            <div class="button-set">
-              <button type="submit">{{ isLoginForm ? '登录' : '注册' }}</button>
-              <button type="button" @click="$modal.hide('auth')">关闭</button>
-            </div>
-          </fieldset>
+    <modal name="auth" classes="transparent"
+      :width="360" height="auto" :pivot-y="0.5"
+      :adaptive="true" :reset="true">
+      <form class="modal" autocomplete="false" action="javascript:;" @submit.prevent="validateBeforeSubmit">
+        <div class="modal-title">
+          <div class="tab" :class="{ active: isLoginForm }" @click="isLoginForm = true">登录</div>
+          <div class="tab" :class="{ active: !isLoginForm }" @click="isLoginForm = false">注册</div>
         </div>
+        <fieldset class="modal-form" :disabled="$wait.is('auth')">
+          <div class="field">
+            <input placeholder="请输入手机号" type="text" name="phone" data-vv-as="手机号"
+              v-model="form.phone"
+              v-validate="'required|digits:11'"
+              :class="{ error: errors.has('phone') }">
+            <span class="error-tip" v-show="errors.has('phone')">{{ errors.first('phone') }}</span>
+          </div>
+          <div class="field verify-code" v-if="!isLoginForm">
+            <input placeholder="请输入验证码" type="text" name="verifyCode" data-vv-as="验证码"
+              v-model="form.verifyCode"
+              v-validate="'required|digits:4'"
+              :class="{ error: errors.has('verifyCode') }">
+            <button class="form-btn" type="button" @click="sendVerifyCode"
+               :disabled="errors.has('phone') || $wait.is('sendingCode')">发送验证码</button>
+            <span class="error-tip" v-show="errors.has('verifyCode')">{{ errors.first('verifyCode') }}</span>
+          </div>
+          <div class="field">
+            <input placeholder="请输入密码" type="password" name="password" data-vv-as="密码"
+              v-model="form.password"
+              v-validate="'required|min:3'"
+              :class="{ error: errors.has('password') }">
+            <span class="error-tip" v-show="errors.has('password')">{{ errors.first('password') }}</span>
+          </div>
+          <div class="field" v-if="!isLoginForm">
+            <input placeholder="请再次确认密码" type="password" name="password-cfm" data-vv-as="密码"
+              v-model="form.passwordCfm"
+              v-validate="{ is: form.password }"
+              :class="{ error: errors.has('password-cfm') }">
+            <span class="error-tip" v-show="errors.has('password-cfm')">{{ errors.first('password-cfm') }}</span>
+          </div>
+          <div class="submit">
+            <button class="form-btn" type="submit"
+              :disabled="errors.any()">{{ isLoginForm ? '登录' : '注册' }}</button>
+          </div>
+        </fieldset>
       </form>
     </modal>
   </div>
 </template>
 
 <script>
+import { api } from '@/utils/api'
+
 export default {
   name: 'Authorization',
   data: () => ({
@@ -51,9 +62,26 @@ export default {
       phone: '',
       password: '',
       passwordCfm: '',
+      verifyCode: '',
     }
   }),
   methods: {
+    sendVerifyCode() {
+      this.$validator.validate('phone').then(() => {
+        this.$wait.start('sendingCode');
+        api.post('/auth/sendVerifyCode', {phone: this.form.phone})
+          .then(() => {
+            this.$notify({
+              group: 'top',
+              text: `验证码已发送`,
+              duration: 2000,
+            });
+          }).finally(() => {
+            // TODO: 暂时禁止发送倒计时
+            this.$wait.end('sendingCode');
+          });
+      });
+    },
     validateBeforeSubmit() {
       this.$validator.validateAll().then(result => {
         if (result) {
@@ -80,11 +108,68 @@ export default {
 .button {
   cursor: pointer;
 }
+
+.modal {
+  @include flex-col;
+  color: #fff;
+  font-size: 14px;
+}
+.modal-title {
+  @include flex-row;
+}
 .tab {
   padding: 10px;
   cursor: pointer;
+  @include modal-title-bg;
   &.active {
-    background-color: #ddf;
+    @include main-color;
+    background-color: transparent;
   }
+}
+.modal-form {
+  @include flex-col;
+  width: 240px;
+  align-self: center;
+  margin: 32px 0;
+}
+.field {
+  margin-bottom: 16px;
+  &.verify-code {
+    input, .form-btn {
+      width: 50%;
+    }
+  }
+}
+input {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  background-color: rgba(0,0,0,0.60);
+  color: #fff;
+  border: none;
+  border-bottom: 1px solid black;
+  @include border-gradient;
+}
+.error-tip {
+  color: #f55;
+  font-weight: bold;
+}
+.form-btn {
+  width: 100%;
+  height: 40px;
+  font-size: 14px;
+  @include button-gradient;
+  @include main-color;
+  border: none;
+  border-top: 1px solid black;
+  @include border-gradient;
+
+  &[disabled] {
+    color: rgba(0, 0, 0, 0.25);
+  }
+}
+.submit {
+  padding-top: 10px;
 }
 </style>

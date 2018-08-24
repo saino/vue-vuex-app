@@ -38,6 +38,9 @@ export default {
 }
 </script>
 
+<style lang="scss" src="@/assets/global.scss">
+</style>
+
 <style scoped lang="scss">
 #app {
   position: absolute;

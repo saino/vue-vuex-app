@@ -1,32 +1,3 @@
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-#app {
-  font-family: "Helvetica Neue For Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-}
-
-div {
-  flex: 1;
-}
-
-ul {
-  list-style: none;
-}
-
-a {
-  text-decoration: none;
-}
-
-button:not(:disabled) {
-  cursor: pointer;
-}
-
 // BASIC -----------------------------------------------
 
 @mixin flex-row($wrap: nowrap) {
@@ -77,6 +48,18 @@ button:not(:disabled) {
   background-image: linear-gradient(-150deg, #6ca1a5 0%, #3a686c 84%);
 }
 
+@mixin border-gradient {
+  border-image: linear-gradient(90deg, rgba(146,202,204,0.40) 0%, rgba(109,170,173,0.99) 32%, #6DABAE 64%, rgba(88,153,157,0.40) 100%) 1;
+}
+
+@mixin modal-bg {
+  background-color: rgba(38,66,70,0.80);
+}
+
+@mixin modal-title-bg {
+  background-color: rgba(58,104,108,0.40);
+}
+
 // COMPONENT -------------------------------------------
 
 @mixin sidebar {
@@ -89,10 +72,10 @@ button:not(:disabled) {
   line-height: 40px;
   padding: 0 16px;
   cursor: pointer;
-  border-bottom: 1px solid #0D1D21;
+  border-bottom: 1px solid rgba(0,0,0,0.2);
   font-size: 14px;
   &.active {
-    border-image: linear-gradient(90deg, rgba(146,202,204,0.40) 0%, rgba(109,170,173,0.99) 32%, #6DABAE 64%, rgba(88,153,157,0.40) 100%) 1;
+    @include border-gradient;
     background-color: #0D1D21;
   }
 }
