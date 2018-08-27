@@ -71,7 +71,7 @@
           <th>Key</th>
           <th>Action</th>
         </tr>
-        <tr v-for="(shortkey, index) of shortkeys" :key="index">
+        <tr v-for="(shortkey, index) of shortkeys" :key="index" :class="{ pad: shortkey[2] }">
           <td>{{ shortkey[0] }}</td>
           <td>{{ shortkey[1] }}</td>
         </tr>
@@ -115,19 +115,23 @@ export default {
     currentTool: '',
 
     shortkeys: [
-      ['/', 'Show this window'],
-      ['`', 'Reset zoom and pan'],
+      ['/', 'Show this window', true],
+      ['`', 'Reset zoom and pan', true],
       ['Space', 'Pan'],
       ['B', 'Draw Background'],
       ['F', 'Draw Foreground'],
-      ['1~9', 'Brush size'],
+      ['1~9', 'Brush size', true],
       ['+ or =', 'Increase brush size'],
       ['-', 'Decrease brush size'],
-      ['Z', 'Undo'],
+      ['Z', 'Undo', true],
       ['X', 'Redo'],
-      ['Q', 'Solid mask'],
+      ['Q', 'Solid mask', true],
       ['W', 'Translucent mask'],
       ['E', 'Hide mask'],
+      ['←', 'Previous frame', true],
+      ['→', 'Next frame'],
+      ['Home', 'First frame'],
+      ['End', 'Last frame'],
     ],
   }),
   // non-reactive data, need to be inited in mounted
@@ -443,8 +447,11 @@ export default {
   width: 100%;
   padding: 30px;
 
+  tr.pad > * {
+    padding-top: 15px;
+  }
   td {
-    height: 30px;
+    line-height: 30px;
   }
 }
 </style>

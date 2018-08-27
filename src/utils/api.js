@@ -20,7 +20,7 @@ api.interceptors.response.use(function (response) {
         group: 'top',
         type: 'error',
         title: 'API error',
-        text: error.response.data.errorMessage,
+        text: error.response ? error.response.data.errorMessage : error.message,
         duration: 10000,
       })
     }

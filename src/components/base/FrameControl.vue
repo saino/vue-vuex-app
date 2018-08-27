@@ -7,12 +7,23 @@
     <input class="input" type="text" :value="state" :readonly="readonly" @change="change($event.target.value)">
     <span class="divisor"> / {{max}}</span>
     <span class="main"> 帧</span>
+    <GlobalEvents
+      @keydown.left="change(state - 1)"
+      @keydown.right="change(state + 1)"
+      @keydown.home="change(0)"
+      @keydown.end="change(max)"
+    />
   </div>
 </template>
 
 <script>
+import GlobalEvents from 'vue-global-events'
+
 export default {
   name: 'FrameControl',
+  components: {
+    GlobalEvents,
+  },
   model: {
     prop: 'state',
     event: 'change',

@@ -53,6 +53,8 @@ Vue.config.keyCodes = {
   num7: 55,
   num8: 56,
   num9: 57,
+  home: 36,
+  end: 35,
 }
 
 new Vue({

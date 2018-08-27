@@ -80,6 +80,8 @@ export default {
   }
 
   .panel {
+    @include flex-col;
+    height: 100%;
     background-color: #031016;
     font-size: 12px;
     color: #fff;

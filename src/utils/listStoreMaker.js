@@ -76,6 +76,7 @@ export default function(
     // base on vue-pathify simple mutations
     clear ({ commit }) {
       commit(idsState, []);
+      commit(entitiesState, {});
       commit(currentIdState, false);
     },
     select ({ commit }, id) {

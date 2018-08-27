@@ -10,6 +10,9 @@
           <div class="tab" :class="{ active: isLoginForm }" @click="isLoginForm = true">登录</div>
           <div class="tab" :class="{ active: !isLoginForm }" @click="isLoginForm = false">注册</div>
         </div>
+        <div class="loading" v-show="$wait.is('auth')">
+          <spinner message="提交中..." text-fg-color="#fff" />
+        </div>
         <fieldset class="modal-form" :disabled="$wait.is('auth')">
           <div class="field">
             <input placeholder="请输入手机号" type="text" name="phone" data-vv-as="手机号"
@@ -24,7 +27,9 @@
               v-validate="'required|digits:4'"
               :class="{ error: errors.has('verifyCode') }">
             <button class="form-btn" type="button" @click="sendVerifyCode"
-               :disabled="errors.has('phone') || $wait.is('sendingCode')">发送验证码</button>
+              :disabled="errors.has('phone') || $wait.is('sendingCode')">
+              {{ $wait.is('sendingCode') ? '验证码发送中...' : '发送验证码' }}
+            </button>
             <span class="error-tip" v-show="errors.has('verifyCode')">{{ errors.first('verifyCode') }}</span>
           </div>
           <div class="field">
@@ -53,9 +58,13 @@
 
 <script>
 import { api } from '@/utils/api'
+import Spinner from 'vue-simple-spinner'
 
 export default {
   name: 'Authorization',
+  components: {
+    Spinner,
+  },
   data: () => ({
     isLoginForm: true,
     form: {
@@ -126,6 +135,11 @@ export default {
     background-color: transparent;
   }
 }
+.loading {
+  @include absolute-mask;
+  @include center;
+  background-color: rgba(0,0,0,0.4);
+}
 .modal-form {
   @include flex-col;
   width: 240px;
@@ -160,14 +174,10 @@ input {
   height: 40px;
   font-size: 14px;
   @include button-gradient;
-  @include main-color;
+  @include main-color(true);
   border: none;
   border-top: 1px solid black;
   @include border-gradient;
-
-  &[disabled] {
-    color: rgba(0, 0, 0, 0.25);
-  }
 }
 .submit {
   padding-top: 10px;

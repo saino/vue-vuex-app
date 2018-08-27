@@ -1,27 +1,25 @@
 <template>
-  <div class="list"
+  <ul class="list"
     v-infinite-scroll="loadMore" infinite-scroll-disabled="cantLoad" infinite-scroll-distance="10">
-    <ul>
-      <li class="material" :class="{ [types]: true }" v-for="(item, index) of list" :key="item.id">
-        <button class="select" @click="select(item)" v-if="target"></button>
-        <div class="thumb" v-if="item.type != 'audio'">
-          <img :src="item.thumbUrl">
-        </div>
-        <div class="operation">
-          <i class="icon icon-preview" @click="$modal.show('preview', item)">预览</i>
-          <i class="icon icon-delete" @click="$cfm(`确定删除素材 ${item.name} ?`, () => remove(index))">删除</i>
-        </div>
-        <div class="info">
-          <p class="name">{{ item.name }}</p>
-          <p class="detail">
-            <span>{{ item.properties.format }}</span>
-            <span>{{ item.formattedSize }}</span>
-            <span>{{ item.type == 'image' ? `${item.properties.width}x${item.properties.height}` : item.formattedDuration }}</span>
-          </p>
-        </div>
-      </li>
-    </ul>
-  </div>
+    <li class="material" :class="{ [types]: true }" v-for="(item, index) of list" :key="item.id">
+      <button class="select" @click="select(item)" v-if="target"></button>
+      <div class="thumb" v-if="item.type != 'audio'">
+        <img :src="item.thumbUrl">
+      </div>
+      <div class="operation">
+        <i class="icon icon-preview" @click="$modal.show('preview', item)">预览</i>
+        <i class="icon icon-delete" @click="$cfm(`确定删除素材 ${item.name} ?`, () => remove(index))">删除</i>
+      </div>
+      <div class="info">
+        <p class="name">{{ item.name }}</p>
+        <p class="detail">
+          <span>{{ item.properties.format }}</span>
+          <span>{{ item.formattedSize }}</span>
+          <span>{{ item.type == 'image' ? `${item.properties.width}x${item.properties.height}` : item.formattedDuration }}</span>
+        </p>
+      </div>
+    </li>
+  </ul>
 </template>
 
 <script>
@@ -64,6 +62,7 @@ export default {
 <style scoped lang="scss">
 ul {
   @include puregrid(147px, 15px);
+  overflow-y: auto;
 }
 li.material {
   @include dashboard-item;
@@ -80,11 +79,7 @@ li.material {
   }
   .select {
     display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    @include absolute-mask;
     background-color: transparent;
     border: none;
   }

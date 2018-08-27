@@ -58,7 +58,7 @@
         :val="current.progress" :text="current.progress + '%'" />
       <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
 
-      <div>
+      <div class="frame-container">
         <label class="label">已抠像的关键帧序列</label>
         <ul class="manual-frames">
           <li v-for="frame in current.manualFrames" :key="frame"
@@ -249,6 +249,7 @@ export default {
         this.timer = window.setInterval(() => {
           if (this.currentFrame >= this.current.material.maxFrame) {
             this.resetPreview();
+            this.$refs.stage.load();
             return;
           }
           ++ this.currentFrame;
@@ -333,12 +334,9 @@ export default {
   width: 100%;
   border: none;
   font-size: 14px;
-  @include main-color;
+  @include main-color(true);
   @include button-gradient;
 
-  &[disabled] {
-    color: rgba(0, 0, 0, 0.25);
-  }
   &.center {
     width: 200px;
     margin: auto;
@@ -349,6 +347,9 @@ export default {
     line-height: 40px;
   }
 }
+.frame-container {
+  overflow-y: auto;
+}
 .label {
   display: block;
   margin: 18px;
@@ -356,7 +357,7 @@ export default {
   @include main-color;
 }
 .manual-frames {
-  @include puregrid(50px);
+  @include puregrid(38px, 10px);
 }
 .frame-thumb {
   position: relative;
@@ -370,11 +371,7 @@ export default {
   }
   .frame-hover {
     display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    @include absolute-mask;
     background-color: rgba(0, 0, 0, 0.4);
     border: 1px solid #fff;
     color: #fff;

@@ -6899,6 +6899,10 @@ vue-simple-progress@^1.1.0:
   version "1.1.0"
   resolved "http://r.cnpmjs.org/vue-simple-progress/download/vue-simple-progress-1.1.0.tgz#7dd1afbf94dfc8a3cdee599a6345d7e5a1913944"
 
+vue-simple-spinner@^1.2.8:
+  version "1.2.8"
+  resolved "http://r.cnpmjs.org/vue-simple-spinner/download/vue-simple-spinner-1.2.8.tgz#638249e9b25b43424ff906c14f1b7c7ed441ce9d"
+
 vue-style-loader@^4.1.0:
   version "4.1.2"
   resolved "http://r.cnpmjs.org/vue-style-loader/download/vue-style-loader-4.1.2.tgz#dedf349806f25ceb4e64f3ad7c0a44fba735fcf8"
