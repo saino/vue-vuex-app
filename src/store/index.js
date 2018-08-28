@@ -43,6 +43,7 @@ export default new Vuex.Store({
       filterFields: ['rotos'],
       initHook(store) {
         store.dispatch('rotos/reExtend');
+        store.dispatch('rotos/checkProgress');
       }
     }),
     pathify.plugin

@@ -35,6 +35,13 @@ export default {
   computed: {
     user: get('user'),
   },
+  watch: {
+    'user.loggedIn': function(val) {
+      if (!val && this.$route.meta.needAuth) {
+        this.$router.push('/');
+      }
+    }
+  }
 }
 </script>
 

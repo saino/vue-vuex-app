@@ -12,8 +12,8 @@ export default function(obj) {
   // 根据后端返回的任务状态进行转换
   if (!obj.jobStatus) {
     obj.jobStatus = {
-      ai: obj.ai_job ? obj.ai_job.status : JOB.INIT,
-      export: obj.export_job ? obj.export_job.status : JOB.INIT,
+      roto: obj.ai_job ? Number(obj.ai_job.status) : JOB.INIT,
+      export: obj.export_job ? Number(obj.export_job.status) : JOB.INIT,
     }
   }
   obj.extendProps({
@@ -29,7 +29,7 @@ export default function(obj) {
       },
     },
     jobStatus: {
-      ai: JOB.INIT,
+      roto: JOB.INIT,
       export: JOB.INIT,
     },
     progress: 0,  // 目前同时只允许进行一项任务

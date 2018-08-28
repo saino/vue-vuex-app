@@ -51,11 +51,8 @@
 
     <div class="operation" v-if="current">
       <button class="operation-button" @click.prevent="aiRoto"
-        :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.ai)">开始云端智能抠像</button>
-      <label class="label" v-show="current.jobStatus.ai == $JOB.QUEUE">智能抠像任务排队中</label>
-      <progress-bar v-show="current.jobStatus.ai == $JOB.RUNNING"
-        size="medium" text-position="inside" text-fg-color="#fff"
-        :val="current.progress" :text="current.progress + '%'" />
+        :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.roto)">开始云端智能抠像</button>
+      <JobProgress :jobStatus="current.jobStatus.roto" :jobName="'智能抠像'" :progress="current.progress" />
       <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
 
       <div class="frame-container">
@@ -70,12 +67,10 @@
         </ul>
       </div>
 
-      <div class="export-operations" v-show="current.id && current.jobStatus.ai == $JOB.DONE">
+      <div class="export-operations" v-show="current.id && current.jobStatus.roto == $JOB.DONE">
         <button class="operation-button" @click.prevent="exportMaterial"
-           :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.export)">开始生成抠像素材</button>
-        <progress-bar v-show="current.jobStatus.export == $JOB.RUNNING"
-          size="medium" text-position="inside" text-fg-color="#fff"
-          :val="current.progress" :text="current.progress + '%'" />
+          :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.export)">开始生成抠像素材</button>
+        <JobProgress :jobStatus="current.jobStatus.export" :jobName="'生成抠像素材'" :progress="current.progress" />
         <div v-show="current.jobStatus.export == $JOB.DONE">
           <a class="operation-button download" :href="current.exportWebm" target="_blank">下载抠像素材</a>
           <a class="operation-button download" :href="current.exportPng" target="_blank">下载PNG序列帧</a>
@@ -89,19 +84,18 @@
 import { get, sync, call } from 'vuex-pathify'
 import { currentSync } from '@/utils/computedHelper'
 import { api } from '@/utils/api'
-import pollProgress from '@/utils/progressHelper'
 import JobStatus from '@/utils/jobConst'
 
-import ProgressBar from 'vue-simple-progress'
 import FrameControl from '@/components/base/FrameControl.vue'
 import Stage from '@/components/base/Stage.vue'
+import JobProgress from '@/components/base/JobProgress.vue'
 
 export default {
   name: 'Roto',
   components: {
     FrameControl,
     Stage,
-    ProgressBar,
+    JobProgress,
   },
   data: () => ({
     playing: false,
@@ -122,7 +116,7 @@ export default {
     readonly() {
       const jobRunning = [this.$JOB.QUEUE, this.$JOB.RUNNING];
       return this.playing || this.$wait.is('grabcut') || (this.current &&
-        (jobRunning.has(this.current.jobStatus.ai) || jobRunning.has(this.current.jobStatus.export)));
+        (jobRunning.has(this.current.jobStatus.roto) || jobRunning.has(this.current.jobStatus.export)));
     },
     lockframe() {
       return this.$wait.is('grabcut');
@@ -169,16 +163,6 @@ export default {
           this.$wait.end('grabcut');
         });
     },
-    jobFinish(guid, success, jobText) {
-      this.update([guid, 'jobStatus.export', success ? this.$JOB.DONE : this.$JOB.FAILED]);
-      const name = this.entities[guid].material.name;
-      this.$notify({
-        group: 'top',
-        type: success ? 'success' : 'error',
-        text: success ? `${name} ${jobText}完成` : `${name} ${jobText}失败`,
-        duration: -1,
-      });
-    },
     aiRoto() {
       if (Object.keys(this.current.manualFrames).length == 0) {
         return this.$notify({
@@ -192,21 +176,7 @@ export default {
       const promise = this.current.id ? Promise.resolve(this.current.id) : this.save(guid);
       promise.then(rotoId => {
         api.post('/roto/aiRoto', {id: rotoId}).then(() => {
-          this.update([guid, 'jobStatus.ai', this.$JOB.QUEUE]);
-          pollProgress('roto', rotoId,
-            progress => {
-              if (progress > 0) {
-                this.update([guid, 'jobStatus.ai', this.$JOB.RUNNING]);
-                this.update([guid, 'progress', progress]);
-              }
-            },
-            success => {
-              api.post('/roto/loadRoto', {id: rotoId})
-                .then(resp => {
-                  this.update([guid, 'masks', resp.masks]);
-                  this.jobFinish(guid, success, '智能抠像');
-                });
-            });
+          this.jobProgress([guid, 'roto', true]);
         });
       });
     },
@@ -221,17 +191,7 @@ export default {
       const guid = this.currentId;  // 允许任务进行中切换
       const rotoId = this.current.id;
       api.post('/roto/finishRoto', {id: rotoId}).then(() => {
-        this.update([guid, 'jobStatus.export', this.$JOB.QUEUE]);
-        pollProgress('export', rotoId,
-          progress => {
-            if (progress > 0) {
-              this.update([guid, 'jobStatus.export', this.$JOB.RUNNING]);
-              this.update([guid, 'progress', progress]);
-            }
-          },
-          success => {
-            this.jobFinish(guid, success, '生成抠像素材');
-          });
+        this.jobProgress([guid, 'export', true]);
       });
     },
     resetPreview() {

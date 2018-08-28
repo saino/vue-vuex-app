@@ -5,6 +5,8 @@ import { make } from 'vuex-pathify'
 
 import listStoreMaker from '@/utils/listStoreMaker'
 import Roto from '@/entities/Roto'
+import JOB from '@/utils/jobConst'
+import pollProgress from '@/utils/progressHelper'
 
 const listStore = listStoreMaker(Roto, '_guid');
 
@@ -34,6 +36,20 @@ const actions = {
     return api.post('/roto/loadRoto', {id})
       .then(resp => {
         dispatch('add', resp);
+        dispatch('checkProgress', id);
+      });
+  },
+  reload ({ state, commit }, guid) {
+    const id = state.entities[guid].id;
+    if (!id) return;
+    Vue.notify({
+      group: 'top',
+      text: `${name} 正在重新加载 Mask...`,
+      duration: 1500,
+    });
+    api.post('/roto/loadRoto', {id})
+      .then(resp => {
+        commit('update', [guid, 'masks', resp.masks]);
       });
   },
   save ({ state, commit }, guid) {
@@ -70,6 +86,48 @@ const actions = {
       .finally(() => {
         commit('update', [guid, 'saving', false]);
       });
+  },
+  jobProgress ({ state, commit, dispatch }, [guid, jobType, reset]) {
+    const rotoId = state.entities[guid].id;
+    const jobStatusPath = 'jobStatus.' + jobType;
+    if (reset) {
+      commit('update', [guid, jobStatusPath, JOB.QUEUE]);
+    }
+    pollProgress(jobType, rotoId,
+      progress => {
+        if (progress > 0) {
+          commit('update', [guid, jobStatusPath, JOB.RUNNING]);
+          commit('update', [guid, 'progress', progress]);
+        }
+      },
+      success => {
+        commit('update', [guid, jobStatusPath, success ? JOB.DONE : JOB.FAILED]);
+        const name = state.entities[guid].material.name;
+        const jobText = jobType == 'export' ? '生成抠像素材' : '智能抠像';
+        Vue.notify({
+          group: 'top',
+          type: success ? 'success' : 'error',
+          text: success ? `${name} ${jobText}完成` : `${name} ${jobText}失败`,
+          duration: -1,
+        });
+        if (jobType == 'roto') {
+          dispatch('reload', guid);
+        }
+      },
+      reset
+    );
+  },
+  checkProgress ({ state, dispatch }, id = false) {
+    let entity;
+    for (let guid in state.entities) {
+      entity = state.entities[guid];
+      if (id !== false && entity.id != id) continue;
+      for (let job in entity.jobStatus) {
+        if ([JOB.QUEUE, JOB.RUNNING].has(entity.jobStatus[job])) {
+          dispatch('jobProgress', [guid, job, false]);
+        }
+      }
+    }
   },
   addMaterial ({ commit }, material) {
     const newRoto = {

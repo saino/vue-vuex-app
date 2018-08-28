@@ -1,6 +1,6 @@
 import { api } from '@/utils/api'
 
-export default function(type, id, progressUpdater, callback) {
+export default function(type, id, progressUpdater, callback, reset = false) {
   const poll = () => {
     api.post('/getProgress', {
       type: type,
@@ -12,9 +12,13 @@ export default function(type, id, progressUpdater, callback) {
       } else {
         callback(resp.success);
       }
+    }).catch(err => {
+      setTimeout(poll, 3000); // as same as notification default disappear time
     })
   }
 
-  progressUpdater(0);
+  if (reset) {
+    progressUpdater(0);
+  }
   poll();
 }
