@@ -9,7 +9,7 @@
           v-for="(roto, guid) of entities" :key="guid"
           :class="{ active: currentId === guid }"
           @click="currentId = guid">
-          <span class="name" :title="roto.material.name">
+          <span class="name" v-tooltip="roto.material.name">
             <i v-if="roto.modified">* </i>{{ roto.material.name }}
           </span>
           <button class="close" @click.stop="$cfmWhen(roto.modified, '抠像尚未保存，确定关闭?', () => remove(guid))">关闭</button>
@@ -245,6 +245,7 @@ export default {
 
   .sidebar {
     flex: 0 0 160px;
+    width: 160px;
     @include sidebar;
   }
   .workbench {

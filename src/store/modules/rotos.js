@@ -1,7 +1,6 @@
 import Vue from 'vue'
-import { api } from '@/utils/api'
+import { api, beacon } from '@/utils/api'
 import { make } from 'vuex-pathify'
-// import merge from 'deepmerge'
 
 import listStoreMaker from '@/utils/listStoreMaker'
 import Roto from '@/entities/Roto'
@@ -44,12 +43,22 @@ const actions = {
     if (!id) return;
     Vue.notify({
       group: 'top',
-      text: `${name} 正在重新加载 Mask...`,
+      text: `${name} 正在加载智能抠像结果...`,
       duration: 1500,
     });
     api.post('/roto/loadRoto', {id})
       .then(resp => {
+        beacon(`Loaded ${Object.keys(resp.masks).length} masks from Roto ${id}`);
         commit('update', [guid, 'masks', resp.masks]);
+      })
+      .catch(() => {
+        Vue.notify({
+          group: 'top',
+          type: 'error',
+          text: `${name} 加载智能抠像结果失败，请关闭重新打开`,
+          duration: -1,
+        });
+        beacon(`Failed to load Roto ${id}`);
       });
   },
   save ({ state, commit }, guid) {

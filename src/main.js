@@ -1,4 +1,10 @@
 import '@/utils/prototypeEnhance'
+import { beacon } from '@/utils/api'
+
+window.onerror = function(message, scriptURI, lineNo, columnNo, error) {
+  beacon({ message, scriptURI, lineNo, columnNo, error });
+};
+
 
 import Vue from 'vue'
 import App from './App.vue'
@@ -12,6 +18,12 @@ Vue.use(VModal, { dialog: true })
 
 import Notifications from 'vue-notification'
 Vue.use(Notifications)
+
+import VTooltip from 'v-tooltip'
+Vue.use(VTooltip, {
+  defaultDelay: 500,
+  defaultPlacement: 'bottom',
+})
 
 import VueWait from 'vue-wait'
 Vue.use(VueWait)

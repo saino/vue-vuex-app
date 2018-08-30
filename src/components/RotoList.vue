@@ -10,7 +10,7 @@
         <i class="icon icon-delete" @click="$cfm(`确定删除抠像 ${item.material.name} ?`, () => remove(index))">删除</i>
       </div>
       <div class="info">
-        <p class="name">{{ item.material.name }}</p>
+        <p class="name" v-tooltip="item.material.name">{{ item.material.name }}</p>
         <p class="detail">{{ item.material.formattedDuration }}</p>
       </div>
     </li>

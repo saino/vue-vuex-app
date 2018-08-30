@@ -25,11 +25,10 @@ export default (loadPath, deletePath, extender) => ({
       // 自动带上 route 里的所有 props 作为参数
       api.post(loadPath, {...this.$props, page: this.page + 1})
         .then(resp => {
-          window.console.log(resp);
           if (extender) {
             resp.result.forEach(extender);
           }
-          this.list = this.list.concat(this.list, resp.result);
+          this.list = this.list.concat(resp.result);
           this.total = resp.total;
           this.page = resp.currentPage;
           this.allLoaded = resp.currentPage == resp.end;

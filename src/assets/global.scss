@@ -36,3 +36,5 @@ fieldset {
 .v--modal-box.transparent {
   @include modal-bg;
 }
+
+@import "tooltip.scss";

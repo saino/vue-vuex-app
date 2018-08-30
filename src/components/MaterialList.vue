@@ -11,7 +11,7 @@
         <i class="icon icon-delete" @click="$cfm(`确定删除素材 ${item.name} ?`, () => remove(index))">删除</i>
       </div>
       <div class="info">
-        <p class="name">{{ item.name }}</p>
+        <p class="name" v-tooltip="item.name">{{ item.name }}</p>
         <p class="detail">
           <span>{{ item.properties.format }}</span>
           <span>{{ item.formattedSize }}</span>
