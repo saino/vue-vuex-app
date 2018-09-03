@@ -2,6 +2,9 @@ import { api } from '@/utils/api'
 
 export default function(type, id, progressUpdater, callback, reset = false) {
   const poll = () => {
+    // auto stop after logout
+    if (!api.defaults.headers.common['token']) return;
+
     api.post('/getProgress', {
       type: type,
       object_id: id,

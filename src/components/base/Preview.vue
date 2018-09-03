@@ -34,6 +34,8 @@ export default {
 .preview-panel {
   max-width: 100%;
   max-height: 100%;
+  @include center;
+  background-color: black;
 }
 .preview-panel > * {
   max-width: 100%;
