@@ -28,7 +28,6 @@ api.interceptors.response.use(function (response) {
     const resp = error.response;
     if (!originalRequest._silent) {
       Vue.notify({
-        group: 'top',
         type: 'error',
         title: 'API error',
         text: resp ? resp.data.errorMessage : error.message,

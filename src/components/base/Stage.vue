@@ -300,8 +300,10 @@ export default {
       }
     },
     // 必须是 base64 uri，而不能是跨域 url
-    overlay(imgUrl) {
+    overlay(imgUrl, emit = true) {
       (new this.Raster(imgUrl)).addTo(this.clip);
+      this.drew = 1;
+      if (!emit) return;
       // 莫名其妙这里不能保证立刻获取到 clip 的最终形态，只能强制延后
       setTimeout(() => {
         this.save(true);

@@ -29,7 +29,6 @@ export default {
       this.$store.dispatch('rotos/load', roto.id);
       this.$router.push('/roto');
       this.$notify({
-        group: 'top',
         text: `抠像 ${roto.material.name} 读取中`,
         duration: 2000,
       });

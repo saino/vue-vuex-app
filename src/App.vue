@@ -16,7 +16,7 @@
 
     <Preview/>
     <v-dialog/>
-    <notifications group="top" />
+    <notifications/>
   </div>
 </template>
 

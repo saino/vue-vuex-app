@@ -49,11 +49,11 @@ export default function(obj) {
           return result;
         }
       },
-      manualMasks: {
+      manualUnsavedMasks: {
         get() {
           let masks = {};
           for (let frame in this.masks) {
-            if (this.masks[frame].manual) {
+            if (this.masks[frame].manual && !this.masks[frame].saved) {
               masks[frame] = this.masks[frame];
             }
           }

@@ -20,13 +20,6 @@ const getters = {
 const mutations = {
   ...make.mutations(state),
   ...listStore.mutations,
-  // overload for auto update modified field
-  update (state, [ id, pathOrDict, value ]) {
-    state.entities[id].batchSet(pathOrDict, value);
-    if (pathOrDict.modified === undefined) {
-      state.entities[id].modified = true;
-    }
-  },
 }
 
 const actions = {
@@ -42,7 +35,6 @@ const actions = {
     const id = state.entities[guid].id;
     if (!id) return;
     Vue.notify({
-      group: 'top',
       text: `${name} 正在加载智能抠像结果...`,
       duration: 1500,
     });
@@ -53,7 +45,6 @@ const actions = {
       })
       .catch(() => {
         Vue.notify({
-          group: 'top',
           type: 'error',
           text: `${name} 加载智能抠像结果失败，请关闭重新打开`,
           duration: -1,
@@ -61,20 +52,22 @@ const actions = {
         beacon(`Failed to load Roto ${id}`);
       });
   },
+  checkModified({ state, commit }, guid) {
+    const entity = state.entities[guid];
+    commit('update', [guid, 'modified', Boolean(entity.manualUnsavedMasks)]);
+  },
   save ({ state, commit }, guid) {
     commit('update', [guid, 'saving', true]);
     const entity = state.entities[guid];
     let data = entity.pickKeys(['id', 'material_id']);
-    // 首次保存时自动保存所有人工 mask
-    if (!entity.id) {
-      data['masks'] = entity.manualMasks;
-    }
+    // 自动保存所有尚未保存的人工 mask
+    data['masks'] = entity.manualUnsavedMasks;
     return api.post('/roto/saveRoto', data)
       .then(resp => {
-        Vue.notify({
-          group: 'top',
-          text: '抠像已保存',
-        });
+        Vue.notify({ text: '抠像已保存' });
+        for (let frame of entity.manualFrames) {
+          commit('update', [guid, `masks.${frame}.saved`, true]);
+        }
         commit('update', [guid, {
           id: resp,
           modified: false,
@@ -85,12 +78,23 @@ const actions = {
         commit('update', [guid, 'saving', false]);
       });
   },
-  saveMask ({ state, commit }, [guid, frame, maskData]) {
+  saveMask ({ state, commit, dispatch }, [guid, frame, maskData]) {
+    const maskSavedPath = `masks.${frame}.saved`;
     commit('update', [guid, 'saving', true]);
+    // 仅在修改图像时保证存储状态，删除图像失败的情况暂时靠刷新解决
+    if (maskData.url) {
+      commit('update', [guid, maskSavedPath, false]);
+    }
     return api.post('/roto/saveMask', {
         id: state.entities[guid].id,
         frame: frame,
         mask: maskData,
+      })
+      .then(() => {
+        if (maskData.url) {
+          commit('update', [guid, maskSavedPath, true]);
+        }
+        dispatch('checkModified', guid);
       })
       .finally(() => {
         commit('update', [guid, 'saving', false]);
@@ -114,7 +118,6 @@ const actions = {
         const name = state.entities[guid].material.name;
         const jobText = jobType == 'export' ? '生成抠像素材' : '智能抠像';
         Vue.notify({
-          group: 'top',
           type: success ? 'success' : 'error',
           text: success ? `${name} ${jobText}完成` : `${name} ${jobText}失败`,
           duration: -1,

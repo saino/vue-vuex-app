@@ -81,7 +81,6 @@ export default {
         api.post('/auth/sendVerifyCode', {phone: this.form.phone})
           .then(() => {
             this.$notify({
-              group: 'top',
               text: `验证码已发送`,
               duration: 2000,
             });

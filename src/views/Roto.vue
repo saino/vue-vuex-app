@@ -40,6 +40,8 @@
         <template slot="drawtools">
           <button :disabled="readonly || !current.masks[currentFrame]"
             @click.prevent="grabcut">Grab Cut</button>
+          <button :disabled="readonly"
+            @click.prevent="fillHole">Fill Hole</button>
         </template>
       </Stage>
       <div class="timeline">
@@ -50,7 +52,30 @@
     </div>
 
     <div class="operation" v-if="current">
+      <modal name="ai-debug"
+        :min-width="200" :min-height="200" :pivot-y="0.5"
+        :adaptive="true" :reset="true" height="auto">
+        <table class="ai-debug">
+          <tr>
+            <th>Max Training Iters</th>
+            <td><input type="number" v-model.number="ai.max_training_iters" min="1" max="1000"></td>
+          </tr>
+          <tr>
+            <th>Learning Rate</th>
+            <td><input type="text" v-model="ai.learning_rate"></td>
+          </tr>
+          <tr>
+            <th>Supervision</th>
+            <td>
+              <label><input type="radio" value="1" v-model="ai.supervision">Strong</label>&nbsp;
+              <label><input type="radio" value="2" v-model="ai.supervision">Weak</label>&nbsp;
+              <label><input type="radio" value="3" v-model="ai.supervision">No supervision</label>
+            </td>
+          </tr>
+        </table>
+      </modal>
       <button class="operation-button" @click.prevent="aiRoto"
+        @contextmenu.prevent="$modal.show('ai-debug')"
         :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.roto)">开始云端智能抠像</button>
       <JobProgress :jobStatus="current.jobStatus.roto" :jobName="'智能抠像'" :progress="current.progress" />
       <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
@@ -83,7 +108,7 @@
 <script>
 import { get, sync, call } from 'vuex-pathify'
 import { currentSync } from '@/utils/computedHelper'
-import { api } from '@/utils/api'
+import { api, data } from '@/utils/api'
 import JobStatus from '@/utils/jobConst'
 
 import FrameControl from '@/components/base/FrameControl.vue'
@@ -100,6 +125,12 @@ export default {
   data: () => ({
     playing: false,
     timer: false,
+
+    ai: {
+      max_training_iters: 500,
+      learning_rate: 1e-8,
+      supervision: 3,
+    },
   }),
   computed: {
     ...get('rotos/*'),
@@ -129,28 +160,41 @@ export default {
       this.$router.push('/dashboard/videos');
     },
     modifyMask(data) {
+      data.manual = true;
       if (data.url) {
-        data.manual = true;
         this.update([this.currentId, 'masks.' + this.currentFrame, data]);
       } else {
         this.delete([this.currentId, 'masks.' + this.currentFrame]);
+        this.loadAiMask();
       }
+      this.checkModified(this.currentId);
       this.$forceUpdate();  // current.masks 需要 deep watch 才能响应，索性直接更新了
       // 已保存的抠像自动更新人工 mask
-      if (this.current.id && data.manual) {
+      if (this.current.id) {
         this.saveMask([this.currentId, this.currentFrame, data]);
       }
+    },
+    loadAiMask() {
+      if (!this.current.id || this.current.jobStatus.roto != this.$JOB.DONE)
+        return;
+      data.get(`/rotos/${this.current.id}/output/${String(this.currentFrame).padStart(5, '0')}.png`, { responseType: 'blob' })
+        .then(blob => {
+          const reader = new FileReader();
+          reader.readAsDataURL(blob.data);
+          reader.onloadend = () => {
+            this.update([this.currentId, 'masks.' + this.currentFrame, {
+              url: reader.result,
+              manual: false,
+            }]);
+            this.$refs.stage.overlay(reader.result, false);
+          }
+        });
     },
     grabcut() {
       const imageUrl = this.$refs.stage.getImg();
       // TODO: 检测必须同时有黑白像素
       if (!imageUrl) {
-        return this.$notify({
-          group: 'top',
-          type: 'warn',
-          text: '请先标注图像前景和背景',
-          duration: 5000,
-        });
+        return this.$notify({ type: 'warn', text: '请先标注图像前景和背景' });
       }
       this.$wait.start('grabcut');
       api.post('/roto/grabcut', {
@@ -163,19 +207,28 @@ export default {
           this.$wait.end('grabcut');
         });
     },
+    fillHole() {
+      const imageUrl = this.$refs.stage.getImg();
+      if (!imageUrl) {
+        return this.$notify({ type: 'warn', text: '请先标注图像前景和背景' });
+      }
+      this.$wait.start('grabcut');
+      api.post('/roto/fillHole', {mask_url: imageUrl})
+        .then(imgUrl => {
+          this.$refs.stage.overlay(imgUrl);
+        }).finally(() => {
+          this.$wait.end('grabcut');
+        });
+    },
     aiRoto() {
       if (Object.keys(this.current.manualFrames).length == 0) {
-        return this.$notify({
-          group: 'top',
-          type: 'warn',
-          text: '请至少手工标注一帧图像',
-          duration: 5000,
-        });
+        return this.$notify({ type: 'warn', text: '请至少手工标注一帧图像' });
       }
       const guid = this.currentId;  // 允许任务进行中切换
       const promise = this.current.id ? Promise.resolve(this.current.id) : this.save(guid);
+      const aiParams = this.ai;
       promise.then(rotoId => {
-        api.post('/roto/aiRoto', {id: rotoId}).then(() => {
+        api.post('/roto/aiRoto', { ...aiParams, id: rotoId }).then(() => {
           this.jobProgress([guid, 'roto', true]);
         });
       });
@@ -338,6 +391,11 @@ export default {
     color: #fff;
     font-size: 10px;
     font-weight: bold;
+  }
+}
+.ai-debug {
+  th, td {
+    padding: 5px;
   }
 }
 </style>
