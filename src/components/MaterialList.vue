@@ -1,6 +1,16 @@
 <template>
   <ul class="list"
     v-infinite-scroll="loadMore" infinite-scroll-disabled="cantLoad" infinite-scroll-distance="10">
+    <FileUpload v-show="!$refs.upload || !$refs.upload.active || !$refs.upload.files[0]" 
+    ref="upload" class="material" :accept="uploadType"  v-model="uploadFiles" @input="uploadHandler" 
+    :post-action="uploadURL" :headers="{Token: user.info.token}">
+      <li class="material" :class="{ [types]: true }" :key="'upload'">
+        上传{{types}}
+      </li>
+    </FileUpload>  
+    <li class="material" v-show="$refs.upload && $refs.upload.active && $refs.upload.files[0]">
+      上传进度：{{$refs.upload&&$refs.upload.files[0]&&$refs.upload.files[0].progress}}
+    </li>  
     <li class="material" :class="{ [types]: true }" v-for="(item, index) of list" :key="item.id">
       <button class="select" @click="select(item)" v-if="target"></button>
       <div class="thumb" v-if="item.type != 'audio'">
@@ -26,6 +36,8 @@
 import { get } from 'vuex-pathify'
 import listMixin from '@/utils/listMixin'
 import Material from '@/entities/Material'
+import VueUploadComponent from 'vue-upload-component';
+import { HOST } from '@/config';
 
 export default {
   mixins: [listMixin('/user/getMaterials', '/user/deleteMaterial', Material)],
@@ -35,13 +47,40 @@ export default {
       type: String,
       default: 'video',
       required: true,
-    }
+    },
   },
   data: () => ({
-    current: false
+    current: false,
+    uploadFiles: [],
+    uploadURL: `${HOST}/api/2/user/uploadMaterial`,
   }),
   computed: {
     target: get('useMaterial/target'),
+    file: function(params) {
+      return this.uploadFiles[0];
+    },
+    uploadType: function() {
+      switch (this.types) {
+        case "video":
+          return "video/*";
+        case "image":
+          return "image/*";
+        case "audio":
+          return "audio/*";
+        default:
+          return "video/*";
+      }
+    },
+  },
+  watch: {
+    'file.success': function(value, oldValue) {
+      if(value&&!oldValue){
+        this.insert(this.file.response.data);
+      }
+    },
+  },
+  components: {
+    'FileUpload': VueUploadComponent
   },
   methods: {
     select(material) {
@@ -55,6 +94,12 @@ export default {
       this.$store.dispatch(targetAction, material);
       this.$router.push(this.target); // useMaterial 会在 router 全局钩子里自动重置
     },
+    uploadHandler(value){
+      if(this.$refs.upload.active){
+        return;
+      }
+      this.$refs.upload.active = true;
+    }
   },
 }
 </script>

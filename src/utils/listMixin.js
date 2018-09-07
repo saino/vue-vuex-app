@@ -19,6 +19,10 @@ export default (loadPath, deletePath, extender) => ({
     }
   },
   methods: {
+    insert(item) {
+      extender && extender(item);
+      this.list.unshift(item);
+    },
     loadMore() {
       if (this.allLoaded) return;
       this.busy = true;
