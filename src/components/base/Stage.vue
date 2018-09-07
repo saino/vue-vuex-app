@@ -49,15 +49,15 @@
       @keyup.f="activateTool('DrawFG')"
       @keydown.equal="brushSize += 1"
       @keydown.minus="brushSize -= 1"
-      @keyup.num1="brushSize = 1"
-      @keyup.num2="brushSize = 2"
-      @keyup.num3="brushSize = 3"
-      @keyup.num4="brushSize = 4"
-      @keyup.num5="brushSize = 5"
-      @keyup.num6="brushSize = 6"
-      @keyup.num7="brushSize = 7"
-      @keyup.num8="brushSize = 8"
-      @keyup.num9="brushSize = 9"
+      @keyup.num1="changeBrushSize($event, 1)"
+      @keyup.num2="changeBrushSize($event, 2)"
+      @keyup.num3="changeBrushSize($event, 3)"
+      @keyup.num4="changeBrushSize($event, 4)"
+      @keyup.num5="changeBrushSize($event, 5)"
+      @keyup.num6="changeBrushSize($event, 6)"
+      @keyup.num7="changeBrushSize($event, 7)"
+      @keyup.num8="changeBrushSize($event, 8)"
+      @keyup.num9="changeBrushSize($event, 9)"
       @keyup.z="undo"
       @keyup.x="redo"
       @keyup.q="opacity = 1"
@@ -104,7 +104,7 @@ export default {
     maxZoom: 10,
     zoomRatio: 1.2,
     brushSize: 5,
-    maxBrush: 100,
+    maxBrush: 999,
     opacity: 0.4,
     defaultOpacity: 0.4,
 
@@ -181,7 +181,7 @@ export default {
         _this.pan = {x: -newCenter.x, y: -newCenter.y};
       }
     });
-    this.addTool('DrawBG', {
+    const drawTool = {
       onActivate() {
         _this.resetCursor();
       },
@@ -192,7 +192,7 @@ export default {
         _this.currentPath = (new _this.Path({
           strokeCap: 'round',
           strokeJoin: 'round',
-          strokeColor: 'black',
+          strokeColor: _this.currentTool == 'DrawBG' ? 'black' : 'white',
           strokeWidth: _this.brushSize
         })).addTo(_this.clip);
         _this.currentPath.add(event.point);
@@ -203,36 +203,15 @@ export default {
         _this.currentPath.add(event.point);
       },
       onMouseUp(event) {
+        if (_this.currentPath.segments.length == 1) {
+          _this.currentPath.closePath();
+        }
         _this.currentPath = undefined;
         _this.save(true);
       }
-    });
-    this.addTool('DrawFG', {
-      onActivate() {
-        _this.resetCursor();
-      },
-      onMouseMove(event) {
-        _this.cursorClip.position = event.point;
-      },
-      onMouseDown(event) {
-        _this.currentPath = (new _this.Path({
-          strokeCap: 'round',
-          strokeJoin: 'round',
-          strokeColor: 'white',
-          strokeWidth: _this.brushSize
-        })).addTo(_this.clip);
-        _this.currentPath.add(event.point);
-        _this.drew = 1;
-      },
-      onMouseDrag(event) {
-        _this.cursorClip.position = event.point;
-        _this.currentPath.add(event.point);
-      },
-      onMouseUp(event) {
-        _this.currentPath = undefined;
-        _this.save(true);
-      }
-    });
+    };
+    this.addTool('DrawBG', drawTool);
+    this.addTool('DrawFG', drawTool);
     this.activateTool('Pan');
 
     this.undoPaths = [];
@@ -377,6 +356,11 @@ export default {
       // TRICK: 由于 this.zoom 的修改不是实时生效，故 newPan 的计算基于 view.zoom
       const newPan = mousePos.subtract(this.view.viewSize.divide(2)).divide(this.view.zoom).subtract(realPos);
       this.pan = {x: newPan.x, y: newPan.y};
+    },
+    changeBrushSize(event, val) {
+      if (event.target.tagName == 'BODY'){
+        this.brushSize = val;
+      }
     },
     onKey(event) {
       // window.console.log(event.keyCode);
