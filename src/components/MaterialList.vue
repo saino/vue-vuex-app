@@ -37,12 +37,13 @@
 </template>
 
 <script>
+import ProgressBar from 'vue-simple-progress'
+import VueUploadComponent from 'vue-upload-component';
 import { get } from 'vuex-pathify'
+
 import listMixin from '@/utils/listMixin'
 import Material from '@/entities/Material'
-import VueUploadComponent from 'vue-upload-component';
 import { HOST } from '@/config';
-import ProgressBar from 'vue-simple-progress'
 
 export default {
   mixins: [listMixin('/user/getMaterials', '/user/deleteMaterial', Material)],

@@ -7,18 +7,19 @@
       <ul class="menu">
         <li class="menu-item main" v-show="target" @click="$router.push(target)">&lt; 返回制作</li>
         <li class="menu-item" v-for="(title, tab) of tabs" :key="tab" v-show="!target || filter.has(tab)"
-          :class="{ active: tab == currentTab }" @click="$router.push(`/dashboard/${tab}`)">
+          :class="{ active: tab == currentTab }" @click="clickTab(tab)" @mouseover="hoverTipShow(tab)" @mouseout="hoverTipHide(tab)">
           {{ title }}
+          <div v-show="tab===hoverTip" class="hover-tip">点击刷新</div>
         </li>
       </ul>
       <div class="menu-item logout main" @click="logout" v-show="!target">退出登录</div>
     </div>
     <div class="panel">
       <!-- <WorkList v-show="currentTab == 'works'" /> -->
-      <RotoList v-show="currentTab == 'rotos'" />
-      <MaterialList :types="'video'" v-show="currentTab == 'videos'" />
-      <MaterialList :types="'image'" v-show="currentTab == 'images'" />
-      <MaterialList :types="'audio'" v-show="currentTab == 'audios'" />
+      <RotoList ref="rotos" v-show="currentTab == 'rotos'" />
+      <MaterialList ref="videos" :types="'video'" v-show="currentTab == 'videos'" />
+      <MaterialList ref="images" :types="'image'" v-show="currentTab == 'images'" />
+      <MaterialList ref="audios" :types="'audio'" v-show="currentTab == 'audios'" />
     </div>
   </div>
 </template>
@@ -49,6 +50,7 @@ export default {
       "images": "我的图片",
       "audios": "我的音频",
     },
+    hoverTip: "",
   }),
   computed: {
     ...get('useMaterial/*'),
@@ -58,6 +60,23 @@ export default {
     logout() {
       this.$router.push('/');
       this.$store.dispatch('logout');
+    },
+    clickTab(tab) {
+      if(tab === this.currentTab){
+        this.$refs[tab].reset();
+      }else{
+        this.$router.push(`/dashboard/${tab}`);
+      }
+    },
+    hoverTipShow(tab){
+      if(tab === this.currentTab){
+        this.hoverTip = tab;
+      }
+    },
+    hoverTipHide(tab,e){
+      if(tab === this.currentTab){
+        this.hoverTip = "";
+      }
     }
   },
 }
@@ -96,6 +115,14 @@ export default {
 
   &.main {
     @include main-color;
+  }
+  position: relative;
+  .hover-tip{
+    position: absolute;
+    right: -15px;
+    top: 0px;
+    font-size: 10px;
+    color: #aaa;
   }
 }
 .logout {
