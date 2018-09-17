@@ -27,7 +27,7 @@ export default (loadPath, deletePath, extender) => ({
       if (this.allLoaded) return;
       this.busy = true;
       // 自动带上 route 里的所有 props 作为参数
-      api.post(loadPath, {...this.$props, page: this.page + 1})
+      api.post(loadPath, { ...this.$props, page: this.page + 1 })
         .then(resp => {
           if (extender) {
             resp.result.forEach(extender);
@@ -39,11 +39,10 @@ export default (loadPath, deletePath, extender) => ({
           this.busy = false;
         });
     },
-    remove(index) {
-      const item = this.list[index];
-      api.post(deletePath, {id: item.id})
+    remove(item) {
+      api.post(deletePath, { id: item.id })
         .then(() => {
-          this.list.splice(index, 1); // TODO: 改成重新按 ID 搜索，否则异步回调时序号可能已发生变化
+          this.list.splice(this.list.findIndex(listItem => listItem.id == item.id), 1);
         });
     },
     reset() {
@@ -55,7 +54,7 @@ export default (loadPath, deletePath, extender) => ({
     },
   },
   watch: {
-    'user.loggedIn': function(val) {
+    'user.loggedIn': function (val) {
       // 登出自动清空列表
       if (!val) {
         this.reset();
