@@ -1,24 +1,28 @@
 <template>
   <ul class="list"
     v-infinite-scroll="loadMore" infinite-scroll-disabled="cantLoad" infinite-scroll-distance="10">
-    <FileUpload v-show="!$refs.upload || !$refs.upload.active || !$refs.upload.files[0]" 
-    ref="upload" class="material" :accept="uploadType"  v-model="uploadFiles" @input="uploadHandler" 
-    :post-action="uploadURL" :headers="{Token: user.info.token}">
-      <li class="material" :class="{ [types]: true }" :key="'upload'">
-        上传{{types}}
-      </li>
-    </FileUpload>  
-    <li class="material" v-show="$refs.upload && $refs.upload.active && $refs.upload.files[0]">
-      上传进度：{{$refs.upload&&$refs.upload.files[0]&&$refs.upload.files[0].progress}}
-    </li>  
-    <li class="material" :class="{ [types]: true }" v-for="(item, index) of list" :key="item.id">
+    <li class="material">
+      <FileUpload :multiple="true" :thread="9" :maximum="9" ref="upload" class="upload" :accept="uploadType" 
+      v-model="uploadFiles" @input-file="inputFile"
+      :post-action="uploadURL" :headers="{Token: user.info.token}">
+      </FileUpload>  
+    </li>
+    <li class="material" v-for="file of uploadFiles" :key="file.id">
+      <div class="thumb upload-progress-container">
+        <ProgressBar class="upload-progress" size="small" max="100" :val="file.progress" :bar-color="file.progress | progressBarColor"></ProgressBar>{{Math.round(file.progress)}}%
+      </div>
+      <div class="info">
+        正在上传。。。
+      </div>
+    </li>
+    <li class="material" :class="{ [types]: true }" v-for="item of list" :key="item.id">
       <button class="select" @click="select(item)" v-if="target"></button>
       <div class="thumb" v-if="item.type != 'audio'">
         <img :src="item.thumbUrl">
       </div>
       <div class="operation">
         <i class="icon icon-preview" @click="$modal.show('preview', item)">预览</i>
-        <i class="icon icon-delete" @click="$cfm(`确定删除素材 ${item.name} ?`, () => remove(index))">删除</i>
+        <i class="icon icon-delete" @click="$cfm(`确定删除素材 ${item.name} ?`, () => remove(item))">删除</i>
       </div>
       <div class="info">
         <p class="name" v-tooltip="item.name">{{ item.name }}</p>
@@ -38,6 +42,7 @@ import listMixin from '@/utils/listMixin'
 import Material from '@/entities/Material'
 import VueUploadComponent from 'vue-upload-component';
 import { HOST } from '@/config';
+import ProgressBar from 'vue-simple-progress'
 
 export default {
   mixins: [listMixin('/user/getMaterials', '/user/deleteMaterial', Material)],
@@ -56,9 +61,6 @@ export default {
   }),
   computed: {
     target: get('useMaterial/target'),
-    file: function(params) {
-      return this.uploadFiles[0];
-    },
     uploadType: function() {
       switch (this.types) {
         case "video":
@@ -72,15 +74,14 @@ export default {
       }
     },
   },
-  watch: {
-    'file.success': function(value, oldValue) {
-      if(value&&!oldValue){
-        this.insert(this.file.response.data);
-      }
-    },
+  filters: {
+    progressBarColor (progress) {
+        return progress < 100 ? "#2196f3" : "#52c41a";
+    }
   },
   components: {
-    'FileUpload': VueUploadComponent
+    'FileUpload': VueUploadComponent,
+    ProgressBar
   },
   methods: {
     select(material) {
@@ -94,12 +95,29 @@ export default {
       this.$store.dispatch(targetAction, material);
       this.$router.push(this.target); // useMaterial 会在 router 全局钩子里自动重置
     },
-    uploadHandler(value){
-      if(this.$refs.upload.active){
-        return;
+    inputFile(newFile, oldFile) {
+      if (newFile && oldFile) {
+
+        // 上传错误
+        if (newFile.error !== oldFile.error) {
+          console.log('error', newFile.error, newFile)
+        }
+
+        // 上传成功
+        if (newFile.success !== oldFile.success) {
+          this.$refs.upload.remove(newFile);
+          this.insert(newFile.response.data);
+        }
+
       }
-      this.$refs.upload.active = true;
-    }
+
+      // 自动上传
+      if (Boolean(newFile) !== Boolean(oldFile) || oldFile.error !== newFile.error) {
+        if (!this.$refs.upload.active) {
+          this.$refs.upload.active = true
+        }
+      }
+    },
   },
 }
 </script>
@@ -109,9 +127,21 @@ ul {
   @include puregrid(147px, 15px);
   overflow-y: auto;
 }
-li.material {
+li.material{
   @include dashboard-item;
-
+  .upload{
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    background: url("../assets/image/upload-material.png");
+  }
+  .upload-progress-container{
+    padding-right: 3px;
+    .upload-progress{
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+  }
   &.audio {
     height: 70px;
 
