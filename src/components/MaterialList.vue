@@ -64,7 +64,7 @@ export default {
     uploadType: function() {
       switch (this.types) {
         case "video":
-          return "video/*";
+          return "video/*,application/zip";
         case "image":
           return "image/*";
         case "audio":
