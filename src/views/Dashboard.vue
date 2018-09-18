@@ -7,9 +7,9 @@
       <ul class="menu">
         <li class="menu-item main" v-show="target" @click="$router.push(target)">&lt; 返回制作</li>
         <li class="menu-item" v-for="(title, tab) of tabs" :key="tab" v-show="!target || filter.has(tab)"
-          :class="{ active: tab == currentTab }" @click="clickTab(tab)" @mouseover="hoverTipShow(tab)" @mouseout="hoverTipHide(tab)">
+          :class="{ active: tab == currentTab }" @click="$router.push(`/dashboard/${tab}`)">
           {{ title }}
-          <div v-show="tab===hoverTip" class="hover-tip">点击刷新</div>
+          <img v-show="tab == currentTab" class="hover-tip" src="../assets/image/refresh.png" @click="clickTab(tab)"/>
         </li>
       </ul>
       <div class="menu-item logout main" @click="logout" v-show="!target">退出登录</div>
@@ -50,7 +50,6 @@ export default {
       "images": "我的图片",
       "audios": "我的音频",
     },
-    hoverTip: "",
   }),
   computed: {
     ...get('useMaterial/*'),
@@ -62,22 +61,8 @@ export default {
       this.$store.dispatch('logout');
     },
     clickTab(tab) {
-      if(tab === this.currentTab){
-        this.$refs[tab].reset();
-      }else{
-        this.$router.push(`/dashboard/${tab}`);
-      }
+      this.$refs[tab].reset();
     },
-    hoverTipShow(tab){
-      if(tab === this.currentTab){
-        this.hoverTip = tab;
-      }
-    },
-    hoverTipHide(tab,e){
-      if(tab === this.currentTab){
-        this.hoverTip = "";
-      }
-    }
   },
 }
 </script>
@@ -118,11 +103,16 @@ export default {
   }
   position: relative;
   .hover-tip{
+    display: none;
     position: absolute;
-    right: -15px;
-    top: 0px;
-    font-size: 10px;
-    color: #aaa;
+    right: 10px;
+    top: 12px;
+    height: 20px;
+    width: 20px;
+    padding: 2px;
+    &:hover{
+      background-color: #fff;
+    }
   }
 }
 .logout {

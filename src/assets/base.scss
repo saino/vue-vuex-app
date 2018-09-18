@@ -91,6 +91,11 @@
   &.active {
     @include border-gradient;
     background-color: #0D1D21;
+    &:hover{
+      .hover-tip{
+        display: block;
+      }
+    }
   }
 }
 
