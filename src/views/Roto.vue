@@ -72,13 +72,21 @@
               <label><input type="radio" value="3" v-model="ai.supervision">No supervision</label>
             </td>
           </tr>
+          <tr>
+            <th>Memory Limit (0~1)</th>
+            <td><input type="text" v-model="ai.memory_limit"><label> 0 means no limit</label></td>
+          </tr>
+          <tr v-if="current.jobStatus.roto == $JOB.DONE">
+            <td colspan="2">
+              <a :href="current.lossesPath" target="_blank">View latest losses</a>
+            </td>
+          </tr>
         </table>
       </modal>
       <button class="operation-button" @click.prevent="aiRoto"
         @contextmenu.prevent="$modal.show('ai-debug')"
         :disabled="lockframe || current.saving || [$JOB.QUEUE, $JOB.RUNNING].has(current.jobStatus.roto)">开始云端智能抠像</button>
       <JobProgress :jobStatus="current.jobStatus.roto" :jobName="'智能抠像'" :progress="current.progress" />
-      <!-- <button class="operation-button" @click.prevent="clearAiMask">清除全部智能抠像 Mask</button> -->
 
       <div class="frame-container">
         <label class="label">已抠像的关键帧序列</label>
@@ -130,6 +138,7 @@ export default {
       max_training_iters: 500,
       learning_rate: 1e-8,
       supervision: 3,
+      memory_limit: 0,
     },
   }),
   computed: {
@@ -232,13 +241,6 @@ export default {
           this.jobProgress([guid, 'roto', true]);
         });
       });
-    },
-    clearAiMask() {
-      for (let frame in this.current.masks) {
-        if (!this.current.masks[frame].manual) {
-          this.delete([this.currentId, 'masks.' + frame]);
-        }
-      }
     },
     exportMaterial() {
       const guid = this.currentId;  // 允许任务进行中切换
