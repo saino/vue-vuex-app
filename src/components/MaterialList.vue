@@ -101,7 +101,13 @@ export default {
 
         // 上传错误
         if (newFile.error !== oldFile.error) {
-          console.log('error', newFile.error, newFile)
+          this.$notify({
+            type: 'error',
+            title: newFile.error,
+            text: `上传失败`,
+            duration: 2000,
+          });
+          this.$refs.upload.remove(newFile);;
         }
 
         // 上传成功
