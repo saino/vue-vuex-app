@@ -70,6 +70,11 @@ export default function(obj) {
           return `${HOST}/data/rotos/${this.id}/export/frames.zip`;
         }
       },
+      lossesPath: {
+        get() {
+          return `${HOST}/data/rotos/${this.id}/losses.json`;
+        }
+      }
     });
   }
   catch(e) {}
