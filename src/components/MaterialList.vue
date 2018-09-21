@@ -103,9 +103,9 @@ export default {
         if (newFile.error !== oldFile.error) {
           this.$notify({
             type: 'error',
-            title: newFile.error,
-            text: `上传失败`,
-            duration: 2000,
+            title: "上传失败",
+            text: newFile.response ? newFile.response.errorMessage : newFile.error,
+            duration: -1,
           });
           this.$refs.upload.remove(newFile);;
         }
