@@ -368,11 +368,38 @@ export default {
     onContextMenu(event) {
       // window.console.log(event);
       const mousePos = new paper.Point(event.offsetX, event.offsetY);
-      const viewPos = this.view.viewToProject(mousePos);
-      window.console.log(viewPos);
+      const realPos = this.view.viewToProject(mousePos).add(this.view.viewSize.divide(2));
+      window.console.log(realPos);
       // window.console.log(this.clip);
-      const imageUrl = this.clip.rasterize().toDataURL();
-      const message = `Clip URL Size: ${imageUrl.length}`
+      const raster = this.clip.rasterize(undefined, false);
+      let color = raster.getPixel(realPos);
+      color = !color.alpha ? 'Transparent' : (color.gray ? 'White' : 'Black');
+
+      const imageData = raster.getImageData();
+      raster.remove();
+      const length = imageData.data.length;
+      let counts = {
+        transparent: 0,
+        black: 0,
+        white: 0,
+        total: length / 4,
+      };
+      let i = -4;
+      while ( (i += 4) < length ) {
+        if (!imageData.data[i+3]) {
+          counts.transparent ++;
+        } else {
+          counts[imageData.data[i] ? 'white' : 'black'] ++;
+        }
+      }
+      const message = `<table style="border-spacing: 15px">
+        <tr><th>Width</th><td>${imageData.width}</td></tr>
+        <tr><th>Height</th><td>${imageData.height}</td></tr>
+        <tr><th>Total pixels</th><td>${counts.total}</td></tr>
+        <tr><th>White pixels</th><td>${counts.white}</td><td>${(counts.white / counts.total * 100).toFixed(1)}%</td></tr>
+        <tr><th>Black pixels</th><td>${counts.black}</td><td>${(counts.black / counts.total * 100).toFixed(1)}%</td></tr>
+        <tr><th>Transparent pixels</th><td>${counts.transparent}</td></tr>
+        <tr><th>Current pixel color</th><td>${color}</td></tr></table>`;
       this.$modal.show('dialog', {text: message});
     },
   },
