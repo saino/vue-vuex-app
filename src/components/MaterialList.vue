@@ -37,12 +37,13 @@
 </template>
 
 <script>
+import ProgressBar from 'vue-simple-progress'
+import VueUploadComponent from 'vue-upload-component';
 import { get } from 'vuex-pathify'
+
 import listMixin from '@/utils/listMixin'
 import Material from '@/entities/Material'
-import VueUploadComponent from 'vue-upload-component';
 import { HOST } from '@/config';
-import ProgressBar from 'vue-simple-progress'
 
 export default {
   mixins: [listMixin('/user/getMaterials', '/user/deleteMaterial', Material)],
@@ -100,7 +101,13 @@ export default {
 
         // 上传错误
         if (newFile.error !== oldFile.error) {
-          console.log('error', newFile.error, newFile)
+          this.$notify({
+            type: 'error',
+            title: "上传失败",
+            text: newFile.response ? newFile.response.errorMessage : newFile.error,
+            duration: -1,
+          });
+          this.$refs.upload.remove(newFile);;
         }
 
         // 上传成功

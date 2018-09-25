@@ -9,16 +9,17 @@
         <li class="menu-item" v-for="(title, tab) of tabs" :key="tab" v-show="!target || filter.has(tab)"
           :class="{ active: tab == currentTab }" @click="$router.push(`/dashboard/${tab}`)">
           {{ title }}
+          <img v-show="tab == currentTab" class="hover-tip" src="../assets/image/refresh.png" @click="clickTab(tab)"/>
         </li>
       </ul>
       <div class="menu-item logout main" @click="logout" v-show="!target">退出登录</div>
     </div>
     <div class="panel">
       <!-- <WorkList v-show="currentTab == 'works'" /> -->
-      <RotoList v-show="currentTab == 'rotos'" />
-      <MaterialList :types="'video'" v-show="currentTab == 'videos'" />
-      <MaterialList :types="'image'" v-show="currentTab == 'images'" />
-      <MaterialList :types="'audio'" v-show="currentTab == 'audios'" />
+      <RotoList ref="rotos" v-show="currentTab == 'rotos'" />
+      <MaterialList ref="videos" :types="'video'" v-show="currentTab == 'videos'" />
+      <MaterialList ref="images" :types="'image'" v-show="currentTab == 'images'" />
+      <MaterialList ref="audios" :types="'audio'" v-show="currentTab == 'audios'" />
     </div>
   </div>
 </template>
@@ -58,7 +59,10 @@ export default {
     logout() {
       this.$router.push('/');
       this.$store.dispatch('logout');
-    }
+    },
+    clickTab(tab) {
+      this.$refs[tab].reset();
+    },
   },
 }
 </script>
@@ -96,6 +100,19 @@ export default {
 
   &.main {
     @include main-color;
+  }
+  position: relative;
+  .hover-tip{
+    display: none;
+    position: absolute;
+    right: 10px;
+    top: 12px;
+    height: 20px;
+    width: 20px;
+    padding: 2px;
+    &:hover{
+      background-color: #fff;
+    }
   }
 }
 .logout {

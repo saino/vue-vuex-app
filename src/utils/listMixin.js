@@ -24,7 +24,7 @@ export default (loadPath, deletePath, extender) => ({
       this.list.unshift(item);
     },
     loadMore() {
-      if (this.allLoaded) return;
+      if(this.cantLoad) return;
       this.busy = true;
       // 自动带上 route 里的所有 props 作为参数
       api.post(loadPath, { ...this.$props, page: this.page + 1 })
@@ -51,6 +51,7 @@ export default (loadPath, deletePath, extender) => ({
       this.total = 0;
       this.allLoaded = false;
       this.busy = false;
+      this.loadMore();
     },
   },
   watch: {
