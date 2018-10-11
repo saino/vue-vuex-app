@@ -45,9 +45,11 @@
         </template>
       </Stage>
       <div class="timeline">
-        <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame">
+        <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame" :zoomOut="zoomOut" :zoomIn="zoomIn" 
+        :maxZoomRatio="maxZoomRatio" :zoomRatio="zoomRatio">
           <button :disabled="lockframe" @click.prevent="play">{{ playButton }}</button>
         </FrameControl>
+        <TimeLine ref="timeline" v-model.number="currentFrame" :zoomRatio="zoomRatio" :resetMaxZoomRotio="resetMaxZoomRotio"></TimeLine>
       </div>
     </div>
 
@@ -122,6 +124,7 @@ import JobStatus from '@/utils/jobConst'
 import FrameControl from '@/components/base/FrameControl.vue'
 import Stage from '@/components/base/Stage.vue'
 import JobProgress from '@/components/base/JobProgress.vue'
+import TimeLine from '@/components/base/TimeLine.vue'
 
 export default {
   name: 'Roto',
@@ -129,11 +132,13 @@ export default {
     FrameControl,
     Stage,
     JobProgress,
+    TimeLine,
   },
   data: () => ({
     playing: false,
     timer: false,
-
+    zoomRatio: 1,
+    maxZoomRatio: 0,
     ai: {
       max_training_iters: 500,
       learning_rate: 1e-8,
@@ -178,6 +183,7 @@ export default {
       }
       this.checkModified(this.currentId);
       this.$forceUpdate();  // current.masks 需要 deep watch 才能响应，索性直接更新了
+      this.$refs.timeline.$forceUpdate();
       // 已保存的抠像自动更新人工 mask
       if (this.current.id) {
         this.saveMask([this.currentId, this.currentFrame, data]);
@@ -275,11 +281,28 @@ export default {
       if (this.$refs.video && this.current) {
         this.$refs.video.currentTime = this.current.material.frameToTime(this.currentFrame);
       }
-    }
+    },
+    zoomOut() {
+      this.zoomRatio *= 0.8;
+      this.zoomRatio =  this.zoomRatio < 1 ? 1 : this.zoomRatio;
+    },
+    zoomIn() {
+      this.zoomRatio *= 1.2;
+      this.zoomRatio =  this.zoomRatio > this.maxZoomRatio ? this.maxZoomRatio : this.zoomRatio;
+    },
+    resetMaxZoomRotio() {
+      this.zoomRatio = 1;
+      const timeline = this.$refs.timeline;
+      if(timeline){
+        const maxTimeLineWidth = timeline.materialFramesCount*(timeline.thumbWidth+timeline.thumbGap)-timeline.thumbGap;
+        this.maxZoomRatio = maxTimeLineWidth/timeline.defaultTimeLineWidth;
+      }
+    },
   },
   watch: {
     current() {
       this.resetPreview();
+      this.resetMaxZoomRotio();
     },
     // video 时间永远由 currentTime 决定，不允许自动播放
     currentFrame() {

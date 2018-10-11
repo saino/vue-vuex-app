@@ -7,6 +7,10 @@
     <input class="input" type="text" :value="state" :readonly="readonly" @change="change($event.target.value)">
     <span class="divisor"> / {{max}}</span>
     <span class="main"> 帧</span>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <button :disabled="zoomRatio <= 1" @click="zoomOutTimeLine">-</button>
+    &nbsp;
+    <button :disabled="zoomRatio >= maxZoomRatio" @click="zoomInTimeLine">+</button>
     <GlobalEvents
       @keydown.left="change(state - 1)"
       @keydown.right="change(state + 1)"
@@ -41,7 +45,19 @@ export default {
     },
     readonly: {
       type: Boolean
-    }
+    },
+    zoomOut: {
+      type: Function,
+    },
+    zoomIn: {
+      type: Function,
+    },
+    zoomRatio: {
+      type: Number,
+    },
+    maxZoomRatio: {
+      type: Number,
+    },
   },
   methods: {
     change (value) {
@@ -54,7 +70,13 @@ export default {
         // 不能直接修改该值，必须由父组件控制和 store 的通讯
         this.$emit('change', value);
       }
-    }
+    },
+    zoomOutTimeLine() {
+      this.zoomOut();
+    },
+    zoomInTimeLine() {
+      this.zoomIn();
+    },
   }
 }
 </script>
