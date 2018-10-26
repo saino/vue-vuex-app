@@ -6,6 +6,8 @@
         v-show="!readonly"
         v-wheel="mouseZoom"
         :style="{ cursor: toolCursor, opacity: opacity }"
+        @mousedown.middle.capture="onMouseMiddle"
+        @mouseup.middle.capture="onMouseMiddle"
         @contextmenu.prevent="onContextMenu"
         ></canvas>
       <!-- 优化效率，预览时用 img 替代 canvas -->
@@ -44,7 +46,8 @@
     <GlobalEvents
       @keyup.slash="$modal.show('stage-shortkey')"
       @keyup.backquote="zoom = 1; pan = {x: 0, y: 0};"
-      @keyup.space="activateTool('Pan')"
+      @keydown.space="activateTool('Pan')"
+      @keyup.space="restoreTool"
       @keyup.a="activateTool('Pen')"
       @keyup.s="activateTool('Select')"
       @keyup.b="activateTool('DrawBG')"
@@ -115,11 +118,12 @@ export default {
     undoed: 0,  // 有撤销记录（记录本身不是 plain object，故不直接记到 vue data 里）
     toolNames: [],
     currentTool: '',
+    lastTool: '',
 
     shortkeys: [
       ['/', 'Show this window', true],
       ['`', 'Reset zoom and pan', true],
-      ['Space', 'Pan', true],
+      ['Space', 'Hold to Pan', true],
       ['A', 'Foreground Pen'],
       ['S', 'Select'],
       ['B', 'Draw Background'],
@@ -184,8 +188,6 @@ export default {
     this.addTool('Pan', {
       onActivate() {
         _this.resetCursor();
-        _this.unselectAll();
-        _this.closeCurrentPath();
       },
       onMouseDrag(event) {
         const offset = event.downPoint.subtract(event.point);
@@ -196,8 +198,9 @@ export default {
     this.addTool('Pen', {
       onActivate() {
         _this.resetCursor();
-        _this.unselectAll();
-        _this.currentPath = undefined;
+        if (!_this.currentPath) {
+          _this.unselectAll();
+        }
       },
       onMouseDown(event) {
         if (!_this.currentPath || _this.currentPath.closed) {
@@ -434,6 +437,7 @@ export default {
         _this.drew = 1;
       },
       onMouseDrag(event) {
+        if (!_this.currentPath) return;
         _this.cursorClip.position = event.point;
         _this.currentPath.add(event.point);
       },
@@ -610,10 +614,18 @@ export default {
       return Object.assign(tool, methods);
     },
     activateTool(name) {
+      if (name == this.currentTool) return;
       const tool = this.tools.find(tool => tool.name === name);
       if (tool) {
+        this.lastTool = this.currentTool;
         this.currentTool = tool.name;
         tool.activate();
+      }
+    },
+    restoreTool() {
+      if (this.lastTool) {
+        this.activateTool(this.lastTool);
+        this.lastTool = '';
       }
     },
     resetCursor() {
@@ -658,6 +670,13 @@ export default {
             strokeColor: fg ? black : white,
           }),
         ]);
+      }
+    },
+    onMouseMiddle(event) {
+      if (event.type == 'mouseup') {
+        this.restoreTool();
+      } else {
+        this.activateTool('Pan');
       }
     },
     mouseZoom(event) {
