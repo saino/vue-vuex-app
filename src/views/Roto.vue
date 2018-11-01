@@ -44,13 +44,11 @@
             @click.prevent="fillHole">Fill Hole</button>
         </template>
       </Stage>
-      <div class="timeline">
-        <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame" :zoomOut="zoomOut" :zoomIn="zoomIn" 
-        :maxZoomRatio="maxZoomRatio" :zoomRatio="zoomRatio">
-          <button :disabled="lockframe" @click.prevent="play">{{ playButton }}</button>
+      <TimeLine ref="timeline" v-model.number="currentFrame">
+        <FrameControl :max="current.material.maxFrame" :readonly="lockframe" v-model.number="currentFrame">
+          <button slot="play" :disabled="lockframe" @click.prevent="play">{{ playButton }}</button>
         </FrameControl>
-        <TimeLine ref="timeline" v-model.number="currentFrame" :zoomRatio="zoomRatio" :resetMaxZoomRotio="resetMaxZoomRotio"></TimeLine>
-      </div>
+      </TimeLine>
     </div>
 
     <div class="operation" v-if="current">
@@ -137,8 +135,6 @@ export default {
   data: () => ({
     playing: false,
     timer: false,
-    zoomRatio: 1,
-    maxZoomRatio: 0,
     ai: {
       max_training_iters: 500,
       learning_rate: 1e-8,
@@ -282,27 +278,10 @@ export default {
         this.$refs.video.currentTime = this.current.material.frameToTime(this.currentFrame);
       }
     },
-    zoomOut() {
-      this.zoomRatio *= 0.8;
-      this.zoomRatio =  this.zoomRatio < 1 ? 1 : this.zoomRatio;
-    },
-    zoomIn() {
-      this.zoomRatio *= 1.2;
-      this.zoomRatio =  this.zoomRatio > this.maxZoomRatio ? this.maxZoomRatio : this.zoomRatio;
-    },
-    resetMaxZoomRotio() {
-      this.zoomRatio = 1;
-      const timeline = this.$refs.timeline;
-      if(timeline){
-        const maxTimeLineWidth = timeline.materialFramesCount*(timeline.thumbWidth+timeline.thumbGap)-timeline.thumbGap;
-        this.maxZoomRatio = maxTimeLineWidth/timeline.defaultTimeLineWidth;
-      }
-    },
   },
   watch: {
     current() {
       this.resetPreview();
-      this.resetMaxZoomRotio();
     },
     // video 时间永远由 currentTime 决定，不允许自动播放
     currentFrame() {
@@ -328,12 +307,6 @@ export default {
   }
   .workbench {
     @include flex-col;
-
-    .timeline {
-      flex: 0 0 100px;
-      background-color: #0e1b20;
-      color: #fff;
-    }
   }
   .operation {
     flex: 0 0 240px;

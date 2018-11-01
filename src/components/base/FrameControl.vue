@@ -1,16 +1,12 @@
 <template>
   <div class="frame-control">
     <button :disabled="readonly || state <= min" @click.prevent="change(state - 1)">Prev</button>
-    <slot></slot>
+    <slot name="play"></slot>
     <button :disabled="readonly || state >= max" @click.prevent="change(state + 1)">Next</button>
     <span class="main"> 当前第 </span>
     <input class="input" type="text" :value="state" :readonly="readonly" @change="change($event.target.value)">
     <span class="divisor"> / {{max}}</span>
     <span class="main"> 帧</span>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <button :disabled="zoomRatio <= 1" @click="zoomOutTimeLine">-</button>
-    &nbsp;
-    <button :disabled="zoomRatio >= maxZoomRatio" @click="zoomInTimeLine">+</button>
     <GlobalEvents
       @keydown.left="change(state - 1)"
       @keydown.right="change(state + 1)"
@@ -46,18 +42,7 @@ export default {
     readonly: {
       type: Boolean
     },
-    zoomOut: {
-      type: Function,
-    },
-    zoomIn: {
-      type: Function,
-    },
-    zoomRatio: {
-      type: Number,
-    },
-    maxZoomRatio: {
-      type: Number,
-    },
+
   },
   methods: {
     change (value) {
@@ -71,12 +56,6 @@ export default {
         this.$emit('change', value);
       }
     },
-    zoomOutTimeLine() {
-      this.zoomOut();
-    },
-    zoomInTimeLine() {
-      this.zoomIn();
-    },
   }
 }
 </script>
@@ -84,7 +63,8 @@ export default {
 <style scoped lang="scss">
 .frame-control {
   font-size: 12px;
-
+  display: inline-block;
+  width: calc(100% - 200px);
   & > button {
     padding: 5px;
   }

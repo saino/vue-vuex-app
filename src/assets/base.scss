@@ -45,13 +45,19 @@
 
 // COLOR -----------------------------------------------
 
+$main-color: #c4bf97;
+
 @mixin main-color($disabled: false) {
-  color: #c4bf97;
+  color: $main-color;
   @if $disabled {
     &[disabled] {
       color: rgba(0, 0, 0, 0.25);
     }
   }
+}
+
+@mixin main-bg-color {
+  background-color: $main-color;
 }
 
 @mixin desc-color {
